@@ -147,9 +147,23 @@ Create a custom function called `SafeJSONParse`:
 // SafeJSONParse ( json )
 // Cross-version JSON parse wrapper for FM19+
 
+*/ 
+
 Let ( 
-  parsed = JSONGetElement ( json ; "" ) ;
-  If ( Left ( parsed ; 1 ) = "?" ; json ; parsed )
+  [ 
+    // Version detection logic - variation with < 22
+    versionCheck = GetAsNumber ( 
+      Substitute ( 
+        Get ( ApplicationVersion ) ; 
+        "." ; 
+        Filter ( 1/2 ; ".," ) 
+      ) 
+    ) < 22
+  ] ; 
+    Case ( 
+      versionCheck ; json ;
+      JSONParse ( json ) 
+    ) 
 )
 ```
 
