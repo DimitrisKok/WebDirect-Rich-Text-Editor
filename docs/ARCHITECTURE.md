@@ -219,7 +219,7 @@ The script uses a buffer to accumulate styled text before flushing to the output
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      BUFFER LIFECYCLE                            │
+│                      BUFFER LIFECYCLE                           │
 ├─────────────────────────────────────────────────────────────────┤
 │  1. Text arrives → Apply styles → Append to $Buffer             │
 │  2. When ¶ arrives → Flush $Buffer to $FinalText                │
