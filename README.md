@@ -147,8 +147,6 @@ Create a custom function called `SafeJSONParse`:
 // SafeJSONParse ( json )
 // Cross-version JSON parse wrapper for FM19+
 
-*/ 
-
 Let ( 
   [ 
     // Version detection logic - variation with < 22
