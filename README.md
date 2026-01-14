@@ -222,9 +222,10 @@ Documentation stored under [`/docs`](./docs/)
 
 ### 🔹 Core
 - [ARCHITECTURE](./docs/ARCHITECTURE.md)
+- [INSTALLATION](./docs/INSTALLATION.md)
 - [DELTA FORMAT](./docs/DELTA_FORMAT.md)
-- [CHANGELOG](./docs/CHANGELOG.md)
 - [TROUBLESHOOTING](./docs/TROUBLESHOOTING.md)
+- [CHANGELOG](./docs/CHANGELOG.md)
 
 ---
 ---
