@@ -281,7 +281,7 @@ If none of the above solves your issue:
    - Content of `$$debug` variable
    - Content of `$$debugCSS` variable
    - Steps to reproduce
-3. **FileMaker Community** - Post on community.claris.com with link to this repo
+3. **FileMaker Community** - Post on [community.claris.co](https://community.claris.com/en/s/) with link to this repo
 
 ---
 
