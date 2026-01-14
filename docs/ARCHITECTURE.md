@@ -349,7 +349,6 @@ This returns HTML-style CSS showing exactly what styles FileMaker has applied:
 | No images | FileMaker text fields don't support embedded images |
 | No alignment | No FileMaker function for paragraph alignment |
 | No indentation | Beyond tabs for lists, no indent control |
-| WebDirect only | Solution designed for browser-based editing |
 | CDN dependency | Quill.js loads from CDN (requires internet) |
 
 ---
