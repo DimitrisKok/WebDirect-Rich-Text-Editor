@@ -45,8 +45,20 @@ Choose an existing table or create a new one to store the rich text content.
 **Calculation:**
 ```
 Let ( 
-  parsed = JSONGetElement ( json ; "" ) ;
-  If ( Left ( parsed ; 1 ) = "?" ; json ; parsed )
+  [ 
+    // Use your proven version detection logic - variation with < 22
+    versionCheck = GetAsNumber ( 
+      Substitute ( 
+        Get ( ApplicationVersion ) ; 
+        "." ; 
+        Filter ( 1/2 ; ".," ) 
+      ) 
+    ) < 22
+  ] ; 
+    Case ( 
+      versionCheck ; json ;
+      JSONParse ( json ) 
+    ) 
 )
 ```
 
