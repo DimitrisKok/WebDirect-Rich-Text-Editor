@@ -224,7 +224,7 @@ Each file defines a standalone specification that governs a functional layer.
 ---
 
 ### 🔹 Core & Governance
-- [Primary Directive](./docs/Primary%20Directive.md)
+- [ARCHITECTURE](./docs/ARCHITECTURE.md)
 - [FileMaker Defaults](./docs/FileMaker%20Defaults.md)
 - [Versions Framework](./docs/Versions%20Framework.md)
 
