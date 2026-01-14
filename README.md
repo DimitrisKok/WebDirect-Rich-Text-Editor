@@ -10,7 +10,6 @@
 ---
 
 ## 🎯 Two Problems We Solved
-a
 ### Problem #1: Rich Text in WebDirect (The "Not Supported" Problem)
 
 According to [Claris official documentation](https://help.claris.com/en/webdirect-guide/content/step-two-understand-the-capabilities-of-filemaker-webdirect.html):
