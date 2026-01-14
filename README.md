@@ -218,15 +218,14 @@ fm-webdirect-richtext/
 ```
 ## 📚 Documentation Index
 
-All framework manuals are stored under [`/docs`](./docs/)  
-Each file defines a standalone specification that governs a functional layer.
+Documentation stored under [`/docs`](./docs/)  
 
 ---
 
-### 🔹 Core & Governance
+### 🔹 Core
 - [ARCHITECTURE](./docs/ARCHITECTURE.md)
-- [FileMaker Defaults](./docs/FileMaker%20Defaults.md)
-- [Versions Framework](./docs/Versions%20Framework.md)
+- [DELTA FORMAT](./docs/DELTA_FORMAT.md)
+- [TROUBLESHOOTING](./docs/TROUBLESHOOTING.md)
 
 ---
 ---
