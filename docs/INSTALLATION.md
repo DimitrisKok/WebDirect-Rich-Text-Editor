@@ -133,7 +133,7 @@ If ( IsEmpty ( yourTable::yourHTML ) ;
 
 **Full Default HTML:**
 
-Copy the entire content of `webviewer/QuillEditor_v4.html` and:
+Copy the entire content of [`QuillEditor_v4.html`](https://github.com/DimitrisKok/WebDirect-Rich-Text-Editor/blob/main/webviewer/QuillEditor_v4.html) and:
 1. Replace all double quotes with escaped quotes (`\"`)
 2. Remove line breaks or join with `& ¶ &`
 3. Wrap in quotes
@@ -257,6 +257,6 @@ Before going live, verify you have:
 
 ## Need Help?
 
-- Check the [Troubleshooting Guide](docs/TROUBLESHOOTING.md)
-- Review the [Architecture Documentation](docs/ARCHITECTURE.md)
-- Open an [Issue on GitHub](https://github.com/your-repo/fm-webdirect-richtext/issues)
+- Check the [Troubleshooting Guide](/TROUBLESHOOTING.md)
+- Review the [Architecture Documentation](/ARCHITECTURE.md)
+
