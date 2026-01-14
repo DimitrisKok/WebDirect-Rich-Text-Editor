@@ -93,8 +93,8 @@ The `saveText` script translates Quill's formatting into FileMaker's native text
 | **PDF Export** | Blurry image | Sharp text |
 | **FileMaker Search** | ❌ No | ✅ Yes |
 | **Layout Integration** | Iframe blob | Native field |
-| **Source Code** | Closed | Open (MIT) |
-| **Customizable** | Limited | Fully |
+| **Source Code** | Open | Open (MIT) |
+| **Customizable** | Yes | Fully |
 
 ---
 
@@ -211,30 +211,30 @@ fm-webdirect-richtext/
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      WebViewer                               │
+│                      WebViewer                              │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │                  Quill.js Editor                     │    │
+│  │                  Quill.js Editor                    │    │
 │  │  ┌─────────────────────────────────────────────┐    │    │
 │  │  │  User types and formats text                │    │    │
 │  │  └─────────────────────────────────────────────┘    │    │
-│  │                       │                              │    │
-│  │                       ▼                              │    │
-│  │              JSON Delta + HTML                       │    │
+│  │                       │                             │    │
+│  │                       ▼                             │    │
+│  │              JSON Delta + HTML                      │    │
 │  └─────────────────────────────────────────────────────┘    │
-│                          │                                   │
-│                          ▼                                   │
+│                          │                                  │
+│                          ▼                                  │
 │         FileMaker.PerformScript("saveText", payload)        │
 └─────────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   saveText Script                            │
+│                   saveText Script                           │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │  Parse JSON Delta → Apply TextStyleAdd/TextColor/   │    │
 │  │  TextFont/TextSize → Build Native FileMaker Text    │    │
 │  └─────────────────────────────────────────────────────┘    │
-│                          │                                   │
-│                          ▼                                   │
+│                          │                                  │
+│                          ▼                                  │
 │              ┌──────────────────────┐                       │
 │              │  yourNativeField     │  ← Native Rich Text   │
 │              │  yourHTML            │  ← WebViewer Source   │
