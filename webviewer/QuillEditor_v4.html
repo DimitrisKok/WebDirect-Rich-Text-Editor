@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<!--
+  FileMaker WebDirect Rich Text Editor
+  Version: 4.0
+  
+  USAGE IN FILEMAKER:
+  Set WebViewer to: "data:text/html," & [this HTML]
+  
+  OR for persistence:
+  Set WebViewer to: "data:text/html," & yourTable::yourHTML
+  
+  FEATURES:
+  - 10 font families
+  - Named sizes (Small, Normal, Large, Huge) + numeric (10-48px)
+  - Bold, Italic, Underline, Strikethrough
+  - Superscript, Subscript
+  - Text color picker
+  - Ordered and Bullet lists
+  - Clear Selection and Clear All buttons
+  - Debounced save (500ms)
+  - HTML persistence via setFMHTML function
+  
+  CREATED: 2026-01-12
+  AUTHORS: Dimitris Kokoutsidis + Claude Opus 4.5 + Gemini 3 Pro
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+<style>
+  body { overflow-y: hidden; font-family: sans-serif; margin: 0; padding: 0; }
+  #editor { height: 90vh; border: none; }
+  
+  /* Custom Clear All button styling */
+  .ql-clearAll { width: auto !important; padding: 0 8px !important; }
+  .ql-clearAll::after { content: '✕ All'; font-size: 11px; }
+  
+  /* Make dropdowns wider for readability */
+  .ql-snow .ql-picker.ql-font { width: 120px; }
+  .ql-snow .ql-picker.ql-size { width: 70px; }
+  
+  /* Font family display names in dropdown */
+  .ql-snow .ql-picker.ql-font .ql-picker-label::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item::before { content: 'Sans Serif'; }
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value=serif]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value=serif]::before { content: 'Serif'; }
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value=monospace]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value=monospace]::before { content: 'Monospace'; }
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value=arial]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value=arial]::before { content: 'Arial'; }
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value=times]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value=times]::before { content: 'Times'; }
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value=courier]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value=courier]::before { content: 'Courier'; }
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value=georgia]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value=georgia]::before { content: 'Georgia'; }
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value=verdana]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value=verdana]::before { content: 'Verdana'; }
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value=tahoma]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value=tahoma]::before { content: 'Tahoma'; }
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value=trebuchet]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value=trebuchet]::before { content: 'Trebuchet'; }
+  .ql-snow .ql-picker.ql-font .ql-picker-label[data-value=helvetica]::before,
+  .ql-snow .ql-picker.ql-font .ql-picker-item[data-value=helvetica]::before { content: 'Helvetica'; }
+  
+  /* Apply actual fonts to editor content */
+  .ql-font-serif { font-family: Georgia, 'Times New Roman', serif; }
+  .ql-font-monospace { font-family: 'Courier New', Courier, monospace; }
+  .ql-font-arial { font-family: Arial, sans-serif; }
+  .ql-font-times { font-family: 'Times New Roman', Times, serif; }
+  .ql-font-courier { font-family: 'Courier New', Courier, monospace; }
+  .ql-font-georgia { font-family: Georgia, serif; }
+  .ql-font-verdana { font-family: Verdana, sans-serif; }
+  .ql-font-tahoma { font-family: Tahoma, sans-serif; }
+  .ql-font-trebuchet { font-family: 'Trebuchet MS', sans-serif; }
+  .ql-font-helvetica { font-family: Helvetica, Arial, sans-serif; }
+  
+  /* Size display in dropdown */
+  .ql-snow .ql-picker.ql-size .ql-picker-label::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item::before { content: 'Normal'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value=small]::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value=small]::before { content: 'Small'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value=large]::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value=large]::before { content: 'Large'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value=huge]::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value=huge]::before { content: 'Huge'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='10px']::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='10px']::before { content: '10'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='12px']::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='12px']::before { content: '12'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='14px']::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='14px']::before { content: '14'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='16px']::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='16px']::before { content: '16'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='18px']::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='18px']::before { content: '18'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='20px']::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='20px']::before { content: '20'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='24px']::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='24px']::before { content: '24'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='32px']::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='32px']::before { content: '32'; }
+  .ql-snow .ql-picker.ql-size .ql-picker-label[data-value='48px']::before,
+  .ql-snow .ql-picker.ql-size .ql-picker-item[data-value='48px']::before { content: '48'; }
+  
+  /* Apply actual sizes */
+  .ql-size-10px { font-size: 10px; }
+  .ql-size-12px { font-size: 12px; }
+  .ql-size-14px { font-size: 14px; }
+  .ql-size-16px { font-size: 16px; }
+  .ql-size-18px { font-size: 18px; }
+  .ql-size-20px { font-size: 20px; }
+  .ql-size-24px { font-size: 24px; }
+  .ql-size-32px { font-size: 32px; }
+  .ql-size-48px { font-size: 48px; }
+</style>
+</head>
+<body>
+<div id="editor"></div>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<script>
+  /* ============================================
+     STEP 1: Register Custom Fonts with Quill
+     ============================================ */
+  var Font = Quill.import('formats/font');
+  Font.whitelist = [
+    false,        /* Default (sans-serif) */
+    'serif', 
+    'monospace',
+    'arial',
+    'times',
+    'courier',
+    'georgia',
+    'verdana',
+    'tahoma',
+    'trebuchet',
+    'helvetica'
+  ];
+  Quill.register(Font, true);
+
+  /* ============================================
+     STEP 2: Register Custom Sizes with Quill
+     ============================================ */
+  var Size = Quill.import('formats/size');
+  Size.whitelist = [
+    false,        /* Default (normal) */
+    'small', 
+    'large', 
+    'huge',
+    '10px',
+    '12px',
+    '14px',
+    '16px',
+    '18px',
+    '20px',
+    '24px',
+    '32px',
+    '48px'
+  ];
+  Quill.register(Size, true);
+
+  /* ============================================
+     STEP 3: Initialize Quill with Full Toolbar
+     ============================================ */
+  var quill = new Quill('#editor', {
+    theme: 'snow',
+    modules: {
+      toolbar: {
+        container: [
+          /* Row 1: Font & Size */
+          [{ 'font': Font.whitelist }, { 'size': Size.whitelist }],
+          
+          /* Row 2: Basic Formatting */
+          ['bold', 'italic', 'underline', 'strike'],
+          
+          /* Row 3: Scripts & Color */
+          [{ 'script': 'sub' }, { 'script': 'super' }],
+          [{ 'color': [] }],
+          
+          /* Row 4: Lists */
+          [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+          
+          /* Row 5: Clear Buttons */
+          ['clean', 'clearAll']
+        ],
+        handlers: {
+          /* Custom handler for Clear All button */
+          'clearAll': function() {
+            var length = quill.getLength();
+            if (length > 1) {
+              quill.removeFormat(0, length);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  /* ============================================
+     STEP 4: Debounced Save to FileMaker
+     ============================================ */
+  var saveTimer;
+
+  quill.on('text-change', function(delta, oldDelta, source) {
+    if (source === 'user') {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function() {
+        var deltaObj = quill.getContents();
+        var html = quill.root.innerHTML;
+        var plain = quill.getText();
+        
+        var payload = {
+          "delta": deltaObj,
+          "html": html,
+          "plain": plain
+        };
+        
+        /* Send to FileMaker script */
+        FileMaker.PerformScript("saveText", JSON.stringify(payload));
+      }, 500);
+    }
+  });
+
+  /* ============================================
+     STEP 5: Load HTML from FileMaker
+     Call this function from FileMaker to load
+     existing content into the editor.
+     
+     Usage in FileMaker:
+     Set Web Viewer [ Object Name: "editor" ; 
+       URL: "javascript:setFMHTML('" & yourTable::yourHTML & "')" ]
+     ============================================ */
+  window.setFMHTML = function(html) {
+    if (quill) {
+      quill.root.innerHTML = html;
+    }
+  };
+</script>
+</body>
+</html>
