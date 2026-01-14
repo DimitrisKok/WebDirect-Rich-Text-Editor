@@ -1,0 +1,41 @@
+/* 
+========================================== 
+SafeJSONParse ( json ) 
+========================================== 
+ 
+Purpose: 
+- Cross-version, backward-compatible JSON parse wrapper. 
+- Returns cached JSON object in FM22+ (for fast, multi-key or looping access). 
+- Returns raw text in older FM, where JSONParse is not available. 
+- Always safe to use as first argument to JSONGetElement() etc. 
+ 
+Parameters: 
+- json : (text) JSON string, e.g. from Get(ScriptParameter) 
+ 
+Returns: 
+- Parsed JSON (FM22+), or raw text JSON (older). 
+ 
+Usage: 
+Set Variable [ $params ; Value: SafeJSONParse ( Get(ScriptParameter) ) ] 
+Set Variable [ $val ; Value: JSONGetElement ( $params ; "my.key" ) ] 
+ 
+By Dimitris Kokoutsidis, 2025
+========================================== 
+*/ 
+
+Let ( 
+  [ 
+    // Use your proven version detection logic - variation with < 22
+    versionCheck = GetAsNumber ( 
+      Substitute ( 
+        Get ( ApplicationVersion ) ; 
+        "." ; 
+        Filter ( 1/2 ; ".," ) 
+      ) 
+    ) < 22
+  ] ; 
+    Case ( 
+      versionCheck ; json ;
+      JSONParse ( json ) 
+    ) 
+)
