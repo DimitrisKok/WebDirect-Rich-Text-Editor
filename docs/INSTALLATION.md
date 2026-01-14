@@ -79,7 +79,7 @@ Let (
 
 ### 3.2 Copy the Script Content
 
-1. Open `scripts/saveText_v3.8.txt` from this repository
+1. Open [`[scripts/saveText_v3.8.txt](https://github.com/DimitrisKok/WebDirect-Rich-Text-Editor/blob/main/scripts/saveText_v3.8.txt)`](https://github.com/DimitrisKok/WebDirect-Rich-Text-Editor/blob/main/scripts/saveText_v3.8.txt) from this repository
 2. Copy the entire content
 3. In FileMaker:
    - Click in the script workspace
