@@ -358,7 +358,5 @@ This returns HTML-style CSS showing exactly what styles FileMaker has applied:
 
 Potential improvements for future versions:
 
-1. **Background color** - Quill supports it; FileMaker has TextColorRemove but no background
-2. **Links** - Parse Quill's link format, store as clickable in container field
-3. **Tables** - Complex but theoretically possible with careful delta parsing
-4. **Offline mode** - Bundle Quill.js in container field for no-internet scenarios
+1. **Tables** - Complex but theoretically possible with careful delta parsing
+2. **Offline mode** - Bundle Quill.js in container field for no-internet scenarios
