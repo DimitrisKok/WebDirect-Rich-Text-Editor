@@ -38,47 +38,47 @@ By using WebViewer for editing AND translating to native text for storage, we ge
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         USER ACTION                              │
-│                    Types/formats in editor                       │
+│                         USER ACTION                             │
+│                    Types/formats in editor                      │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                       QUILL.JS (WebViewer)                       │
+│                       QUILL.JS (WebViewer)                      │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │ text-change event → getContents() → JSON Delta            │  │
-│  │                   → root.innerHTML → HTML                  │  │
-│  │                   → getText() → Plain text                 │  │
+│  │                   → root.innerHTML → HTML                 │  │
+│  │                   → getText() → Plain text                │  │
 │  └───────────────────────────────────────────────────────────┘  │
-│                                                                  │
-│  JSON Payload:                                                   │
-│  {                                                               │
-│    "delta": { "ops": [...] },                                    │
-│    "html": "<p>...</p>",                                         │
-│    "plain": "..."                                                │
-│  }                                                               │
+│                                                                 │
+│  JSON Payload:                                                  │
+│  {                                                              │
+│    "delta": { "ops": [...] },                                   │
+│    "html": "<p>...</p>",                                        │
+│    "plain": "..."                                               │
+│  }                                                              │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 │ FileMaker.PerformScript
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      saveText SCRIPT                             │
+│                      saveText SCRIPT                            │
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │  Parse JSON → Iterate ops → Apply FileMaker text styles   │  │
-│  │                                                            │  │
-│  │  For each op:                                              │  │
-│  │    1. Normalize newlines (LF → ¶)                          │  │
-│  │    2. Force base style (Arial 12)                          │  │
-│  │    3. Route to appropriate CASE                            │  │
-│  │    4. Apply attributes (bold, color, font, size)           │  │
-│  │    5. Handle list markers                                  │  │
-│  │    6. Add to buffer or flush to output                     │  │
+│  │                                                           │  │
+│  │  For each op:                                             │  │
+│  │    1. Normalize newlines (LF → ¶)                         │  │
+│  │    2. Force base style (Arial 12)                         │  │
+│  │    3. Route to appropriate CASE                           │  │
+│  │    4. Apply attributes (bold, color, font, size)          │  │
+│  │    5. Handle list markers                                 │  │
+│  │    6. Add to buffer or flush to output                    │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      OUTPUT FIELDS                               │
+│                      OUTPUT FIELDS                              │
 │  ┌─────────────────────┐  ┌─────────────────────┐               │
 │  │  yourNativeField    │  │  yourHTML           │               │
 │  │  (Native Rich Text) │  │  (WebViewer Source) │               │
@@ -125,23 +125,23 @@ Quill uses a format called "Delta" to represent rich text as JSON. It's an array
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     MAIN LOOP (for each op)                      │
+│                     MAIN LOOP (for each op)                     │
 ├─────────────────────────────────────────────────────────────────┤
 │  Step 3.1: Get chunk and attributes from JSON                   │
 │  Step 3.2: Normalize newlines (LF → ¶)                          │
 │            Apply base style (Arial 12)                          │
 │  Step 3.3: Calculate flags (endsWithReturn, startsWithReturn)   │
 ├─────────────────────────────────────────────────────────────────┤
-│                      CASE ROUTING                                │
+│                      CASE ROUTING                               │
 ├───────────────┬───────────────┬───────────────┬─────────────────┤
 │    CASE A     │    CASE B     │    CASE C     │    CASE D       │
-│  Pure ¶      │  Text + ¶    │  Leading ¶   │  Standard       │
-│              │  + List attr  │  + Text       │  Text           │
+│  Pure ¶       │  Text + ¶     │  Leading ¶    │  Standard       │
+│               │  + List attr  │  + Text       │  Text           │
 ├───────────────┼───────────────┼───────────────┼─────────────────┤
-│ • Add list   │ • Strip ¶    │ • Flush prev  │ • Apply styles  │
-│   marker     │ • Apply styles│ • Strip lead  │ • Add to buffer │
-│ • Flush      │ • Add marker  │ • Apply styles│ • Flush if ¶   │
-│   buffer     │ • Flush       │ • Add to buf  │                 │
+│ • Add list    │ • Strip ¶     │ • Flush prev  │ • Apply styles  │
+│   marker      │ • Apply styles│ • Strip lead  │ • Add to buffer │
+│ • Flush       │ • Add marker  │ • Apply styles│ • Flush if ¶    │
+│   buffer      │ • Flush       │ • Add to buf  │                 │
 └───────────────┴───────────────┴───────────────┴─────────────────┘
 ```
 
