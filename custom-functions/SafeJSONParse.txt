@@ -25,7 +25,7 @@ By Dimitris Kokoutsidis, 2025
 
 Let ( 
   [ 
-    // Use your proven version detection logic - variation with < 22
+    // Version detection logic - variation with < 22
     versionCheck = GetAsNumber ( 
       Substitute ( 
         Get ( ApplicationVersion ) ; 
