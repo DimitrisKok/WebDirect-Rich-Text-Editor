@@ -223,6 +223,7 @@ Documentation stored under [`/docs`](./docs/)
 ### 🔹 Core
 - [ARCHITECTURE](./docs/ARCHITECTURE.md)
 - [DELTA FORMAT](./docs/DELTA_FORMAT.md)
+- [CHANGELOG](./docs/CHANGELOG.md)
 - [TROUBLESHOOTING](./docs/TROUBLESHOOTING.md)
 
 ---
