@@ -240,7 +240,7 @@ A single op with leading newline. This is why CASE C exists.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    INCOMING OP                               │
+│                    INCOMING OP                              │
 └─────────────────────────────────────────────────────────────┘
                            │
                            ▼
