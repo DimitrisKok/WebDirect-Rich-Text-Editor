@@ -292,5 +292,6 @@ If none of the above solves your issue:
 | 19.x | ✅ Yes | Full support |
 | 20.x | ✅ Yes | Full support |
 | 21.x | ✅ Yes | Full support |
+| 22.x | ✅ Yes | Full support |
 | 18.x | ⚠️ Partial | May need JSON function adjustments |
 | < 18 | ❌ No | Missing required JSON functions |
