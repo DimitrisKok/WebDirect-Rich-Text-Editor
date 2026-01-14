@@ -257,6 +257,6 @@ Before going live, verify you have:
 
 ## Need Help?
 
-- Check the [Troubleshooting Guide](/TROUBLESHOOTING.md)
-- Review the [Architecture Documentation](/ARCHITECTURE.md)
+- Check the [Troubleshooting Guide](./TROUBLESHOOTING.md)
+- Review the [Architecture Documentation](./ARCHITECTURE.md)
 
