@@ -216,7 +216,19 @@ fm-webdirect-richtext/
     ├── TROUBLESHOOTING.md       # Common issues
     └── DELTA_FORMAT.md          # Quill Delta JSON reference
 ```
+## 📚 Documentation Index
 
+All framework manuals are stored under [`/docs`](./docs/)  
+Each file defines a standalone specification that governs a functional layer.
+
+---
+
+### 🔹 Core & Governance
+- [Primary Directive](./docs/Primary%20Directive.md)
+- [FileMaker Defaults](./docs/FileMaker%20Defaults.md)
+- [Versions Framework](./docs/Versions%20Framework.md)
+
+---
 ---
 
 ## 🔧 How It Works
