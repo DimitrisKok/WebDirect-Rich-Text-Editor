@@ -24,22 +24,22 @@ This open-source module enables robust rich text editing in WebDirect while main
 This isn't a workaround—it's a **bridge**. It uses a modern web interface ([Quill.js 2.0](https://quilljs.com/)) for the user experience, but crucially, it respects the FileMaker database by converting that input into **native FileMaker styled text**.
 
 ```
-                                                  ┌─────────────────────────────────────────────────────────────────┐
-                                                  │  USER EXPERIENCE (WebViewer)                                    │
-                                                  │  ┌─────────────────────────────────────────────────────────────┐│
-                                                  │  │         Quill.js Rich Text Editor                           ││
-                                                  │  │         Modern, familiar editing interface                  ││
-                                                  │  └─────────────────────────────────────────────────────────────┘│ 
-                                                  └─────────────────────────────────────────────────────────────────┘
-                                                                                │
-                                                                                ▼ JSON Delta → Native Translation
-                                                  ┌─────────────────────────────────────────────────────────────────┐
-                                                  │  DATA STORAGE (Native FileMaker Text Field)                     │
-                                                  │  ┌─────────────────────────────────────────────────────────────┐│
-                                                  │  │  TextStyleAdd() • TextColor() • TextFont() • TextSize()     ││
-                                                  │  │  Clean, searchable, vector-ready for reporting              ││
-                                                  │  └─────────────────────────────────────────────────────────────┘│
-                                                  └─────────────────────────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  USER EXPERIENCE (WebViewer)                                    │
+  │  ┌─────────────────────────────────────────────────────────────┐│
+  │  │         Quill.js Rich Text Editor                           ││
+  │  │         Modern, familiar editing interface                  ││
+  │  └─────────────────────────────────────────────────────────────┘│
+  └─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼ JSON Delta → Native Translation
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  DATA STORAGE (Native FileMaker Text Field)                     │
+  │  ┌─────────────────────────────────────────────────────────────┐│
+  │  │  TextStyleAdd() • TextColor() • TextFont() • TextSize()     ││
+  │  │  Clean, searchable, vector-ready for reporting              ││
+  │  └─────────────────────────────────────────────────────────────┘│
+  └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
