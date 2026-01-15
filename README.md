@@ -24,22 +24,22 @@ This open-source module enables robust rich text editing in WebDirect while main
 This isn't a workaround—it's a **bridge**. It uses a modern web interface ([Quill.js 2.0](https://quilljs.com/)) for the user experience, but crucially, it respects the FileMaker database by converting that input into **native FileMaker styled text**.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  USER EXPERIENCE (WebViewer)                                     │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │         Quill.js Rich Text Editor                           │ │
-│  │         Modern, familiar editing interface                  │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ JSON Delta → Native Translation
-┌─────────────────────────────────────────────────────────────────┐
-│  DATA STORAGE (Native FileMaker Text Field)                      │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │  TextStyleAdd() • TextColor() • TextFont() • TextSize()     │ │
-│  │  Clean, searchable, vector-ready for reporting              │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
+                                                  ┌─────────────────────────────────────────────────────────────────┐
+                                                  │  USER EXPERIENCE (WebViewer)                                    │
+                                                  │  ┌─────────────────────────────────────────────────────────────┐│
+                                                  │  │         Quill.js Rich Text Editor                           ││
+                                                  │  │         Modern, familiar editing interface                  ││
+                                                  │  └─────────────────────────────────────────────────────────────┘│ 
+                                                  └─────────────────────────────────────────────────────────────────┘
+                                                                                │
+                                                                                ▼ JSON Delta → Native Translation
+                                                  ┌─────────────────────────────────────────────────────────────────┐
+                                                  │  DATA STORAGE (Native FileMaker Text Field)                     │
+                                                  │  ┌─────────────────────────────────────────────────────────────┐│
+                                                  │  │  TextStyleAdd() • TextColor() • TextFont() • TextSize()     ││
+                                                  │  │  Clean, searchable, vector-ready for reporting              ││
+                                                  │  └─────────────────────────────────────────────────────────────┘│
+                                                  └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -111,7 +111,7 @@ Copy `scripts/saveText_v3.8.txt` into your solution and update field references.
 
 Configure with the HTML from `webviewer/QuillEditor_v4.html`
 
-**Detailed instructions:** See [INSTALLATION.md](INSTALLATION.md)
+**Detailed instructions:** See [INSTALLATION.md](docs/INSTALLATION.md)
 
 ---
 
@@ -198,7 +198,7 @@ MIT License — Use freely in your commercial and personal projects.
 
 This solution was developed through collaborative effort:
 
-- **Dimitris Kokoutsidis** ([Integrity Data Ltd](https://axelar.eu)) — Architecture and domain expertise
+- **Dimitris Kokoutsidis** ([Axelar](https://axelar.eu)) — Architecture and domain expertise
 - **Claude (Anthropic)** — Script development and documentation
 - **Gemini (Google)** — Analysis and validation
 
