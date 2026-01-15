@@ -166,7 +166,13 @@ The `saveText` script iterates through Quill's JSON Delta format and applies Fil
 For the full technical breakdown, see [ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ---
-
+### 🔹 Core
+- [ARCHITECTURE](./docs/ARCHITECTURE.md)
+- [INSTALLATION](./docs/INSTALLATION.md)
+- [DELTA FORMAT](./docs/DELTA_FORMAT.md)
+- [TROUBLESHOOTING](./docs/TROUBLESHOOTING.md)
+- [CHANGELOG](./docs/CHANGELOG.md)
+---
 ## 🎯 A Victory for the Platform
 
 This project demonstrates the incredible flexibility of Claris FileMaker. By combining a **WebViewer for UI** and **native Scripting for logic**, we can solve complex challenges without external plugins or dependencies.
