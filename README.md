@@ -10,9 +10,10 @@
 ---
 
 ## 🎯 What This Module Does
-<p align="center">
+<!-- <p align="center">
   <img src="images/WebDirectRichTextEditor.png" alt="FileMaker WebDirect Rich Text Editor" width="900">
-</p>
+</p> -->
+![FileMaker WebDirect Rich Text Editor](images/WebDirectRichTextEditor.png)
 
 FileMaker WebDirect is an incredible deployment tool that has revolutionized how we deliver apps. One common request from clients is **rich text editing** that also **prints perfectly** on reports—something that has traditionally been challenging in a web environment.
 
