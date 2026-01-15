@@ -1,6 +1,6 @@
-# FileMaker WebDirect Rich Text Editor
+# FileMaker WebDirect Rich Text Bridge
 
-**Two problems. One solution. Both "impossible" — until now.**
+**Extending WebDirect with native rich text editing for professional reporting.**
 
 [![FileMaker 19+](https://img.shields.io/badge/FileMaker-19%2B-blue)](https://www.claris.com/filemaker/)
 [![WebDirect Compatible](https://img.shields.io/badge/WebDirect-Compatible-green)](https://www.claris.com/filemaker/)
@@ -9,96 +9,58 @@
 
 ---
 
-## 🎯 Two Problems We Solved
-### Problem #1: Rich Text in WebDirect (The "Not Supported" Problem)
+## 🎯 What This Module Does
 
-According to [Claris official documentation](https://help.claris.com/en/webdirect-guide/content/step-two-understand-the-capabilities-of-filemaker-webdirect.html):
+FileMaker WebDirect is an incredible deployment tool that has revolutionized how we deliver apps. One common request from clients is **rich text editing** that also **prints perfectly** on reports—something that has traditionally been challenging in a web environment.
 
-> *"FileMaker WebDirect offers limited text styles... Web users cannot enter data with rich text formatting. Editing a field in FileMaker WebDirect removes any existing rich text formatting."*
+Rather than seeing this as a limitation, we saw it as an opportunity to leverage the power of the FileMaker Script Engine.
 
-**Translation:** If you're using WebDirect, you're stuck with plain text. Period. That's what Claris says.
-
-**We solved it.** ✅
+This open-source module enables robust rich text editing in WebDirect while maintaining the **data integrity** and **print fidelity** that FileMaker is known for.
 
 ---
 
-### Problem #2: The Bitmap Problem (Even Claris's Add-on Has This)
+## 💡 The Approach: A Translation Engine
 
-Claris offers a [Rich Text Editor Add-on](https://marketplace.claris.com/detail/1551.html) that uses Quill.js (version from 2020). It works in FileMaker Pro and Go. **But it has a fatal flaw:**
-
-The content stays **inside the WebViewer**. When you print or export to PDF:
-
-| Problem | Impact |
-|---------|--------|
-| 🖼️ **Bitmap rendering** | WebViewer prints as a low-resolution screenshot |
-| 🔍 **Not searchable** | Text inside WebViewer isn't indexed by FileMaker |
-| 📄 **Broken layouts** | Your professional vector reports get a blurry image blob |
-| 🖨️ **Print quality** | Pixelated, unprofessional output |
-
-**Every WebViewer-based rich text solution has this problem.**
-
-**We solved it.** ✅
-
----
-
-## 💡 Our Solution: The Best of Both Worlds
+This isn't a workaround—it's a **bridge**. It uses a modern web interface ([Quill.js 2.0](https://quilljs.com/)) for the user experience, but crucially, it respects the FileMaker database by converting that input into **native FileMaker styled text**.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  EDITING (WebDirect + Pro + Go)                                 │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │         Quill.js 2.0.3 in WebViewer                         ││
-│  │         Modern WYSIWYG editing experience                   ││
-│  └─────────────────────────────────────────────────────────────┘│
+│  USER EXPERIENCE (WebViewer)                                     │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │         Quill.js Rich Text Editor                           │ │
+│  │         Modern, familiar editing interface                  │ │
+│  └─────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              ▼ JSON Delta Translation
+                              ▼ JSON Delta → Native Translation
 ┌─────────────────────────────────────────────────────────────────┐
-│  STORAGE & OUTPUT                                               │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │         Native FileMaker Text Field                         ││ 
-│  │         Vector printing • Searchable • Layout-ready         ││
-│  └─────────────────────────────────────────────────────────────┘│
+│  DATA STORAGE (Native FileMaker Text Field)                      │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │  TextStyleAdd() • TextColor() • TextFont() • TextSize()     │ │
+│  │  Clean, searchable, vector-ready for reporting              │ │
+│  └─────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-The `saveText` script translates Quill's formatting into FileMaker's native text functions:
-- `TextStyleAdd()` for bold, italic, underline, strikethrough, super/subscript
-- `TextColor()` for text colors
-- `TextFont()` for font families
-- `TextSize()` for font sizes
+---
 
-**Result:** Rich text that works in WebDirect AND prints beautifully.
+## ✨ Why This Matters for Your Solution
+
+### Data Purity
+By storing data as **native text** (not HTML blobs), your database remains clean, searchable, and fast. FileMaker's indexing and Find operations work perfectly on the formatted content.
+
+### Report Quality
+Because the data is native, your printed PDFs leverage FileMaker's powerful **vector rendering engine**. Your invoices, letters, and reports look razor-sharp at any resolution.
+
+### Seamless Integration
+It works alongside your existing layouts. The native text field respects your Theme styling and integrates naturally with your design.
+
+### No External Dependencies
+Built entirely with standard FileMaker tools—Scripting and WebViewers. No plugins required.
 
 ---
 
-## 📊 Comparison: Problems & Solutions
-
-| Problem | Claris Says | Claris Add-on | **This Solution** |
-|---------|-------------|---------------|-------------------|
-| **Rich Text in WebDirect** | "Not supported" | ❌ Doesn't work | ✅ **SOLVED** |
-| **Vector Printing** | N/A | ❌ Bitmap only | ✅ **SOLVED** |
-| **Searchable Text** | N/A | ❌ No | ✅ **Yes** |
-| **Native Field Output** | N/A | ❌ WebViewer only | ✅ **Yes** |
-
-### Feature Comparison
-
-| Feature | Claris Rich Text Add-on | This Solution |
-|---------|------------------------|---------------|
-| **Quill Version** | 1.x (2020) | 2.0.3 (2024) |
-| **WebDirect Support** | ❌ No | ✅ Yes |
-| **Pro/Go Support** | ✅ Yes | ✅ Yes |
-| **Output Type** | WebViewer (bitmap) | Native text field |
-| **Print Quality** | Screenshot/pixelated | Vector/crisp |
-| **PDF Export** | Blurry image | Sharp text |
-| **FileMaker Search** | ❌ No | ✅ Yes |
-| **Layout Integration** | Iframe blob | Native field |
-| **Source Code** | Open | Open (MIT) |
-| **Customizable** | Yes | Fully |
-
----
-
-## ✨ Features
+## 📋 Features
 
 ### Text Formatting
 - **Bold**, *Italic*, <u>Underline</u>, ~~Strikethrough~~
@@ -113,8 +75,8 @@ The `saveText` script translates Quill's formatting into FileMaker's native text
 - Tab indentation for proper list alignment
 
 ### Technical
-- Native FileMaker text output (prints as vector, not bitmap)
-- HTML persistence for WebViewer reload
+- Native FileMaker text output
+- HTML persistence for WebViewer state
 - Debounced saving (500ms) to prevent script overload
 - Cross-version JSON compatibility (FM19+)
 
@@ -132,79 +94,37 @@ The `saveText` script translates Quill's formatting into FileMaker's native text
 
 ### 1. Create Required Fields
 
-In your target table, create:
-
 | Field Name | Type | Purpose |
 |------------|------|---------|
-| `yourNativeField` | Text | Stores the native FileMaker rich text |
-| `yourHTML` | Text | Stores HTML for WebViewer persistence |
+| `RichText_Native` | Text | Stores the native FileMaker rich text |
+| `RichText_HTML` | Text | Stores HTML for WebViewer persistence |
 
 ### 2. Add the Custom Function
 
-Create a custom function called `SafeJSONParse`:
-
-```
-// SafeJSONParse ( json )
-// Cross-version JSON parse wrapper for FM19+
-
-Let ( 
-  [ 
-    // Version detection logic - variation with < 22
-    versionCheck = GetAsNumber ( 
-      Substitute ( 
-        Get ( ApplicationVersion ) ; 
-        "." ; 
-        Filter ( 1/2 ; ".," ) 
-      ) 
-    ) < 22
-  ] ; 
-    Case ( 
-      versionCheck ; json ;
-      JSONParse ( json ) 
-    ) 
-)
-```
+Create `SafeJSONParse` (see `custom-functions/SafeJSONParse.txt`)
 
 ### 3. Import the Script
 
-Copy the `saveText` script from `scripts/saveText_v3.8.txt` into your solution.
-
-**Important:** Update these references in the script:
-- `yourTable::yourNativeField` → Your actual table and field names
-- `yourTable::yourHTML` → Your actual HTML storage field
+Copy `scripts/saveText_v3.8.txt` into your solution and update field references.
 
 ### 4. Add the WebViewer
 
-1. Create a WebViewer object on your layout
-2. Set the Web Address to: `"data:text/html," & yourTable::yourHTML`
-3. For initial content, use the HTML from `webviewer/QuillEditor_v4.html`
+Configure with the HTML from `webviewer/QuillEditor_v4.html`
 
-### 5. Configure the WebViewer
-
-Set the WebViewer calculation to load either:
-- Stored HTML (if `yourHTML` is not empty)
-- Default editor HTML (if starting fresh)
-
-```
-If ( IsEmpty ( yourTable::yourHTML ) ; 
-  // Your default HTML here
-  "data:text/html,<html>..." ;
-  "data:text/html," & yourTable::yourHTML
-)
-```
+**Detailed instructions:** See [INSTALLATION.md](INSTALLATION.md)
 
 ---
 
-## 📁 File Structure
+## 📁 Repository Structure
 
 ```
 fm-webdirect-richtext/
 ├── README.md                    # This file
 ├── CHANGELOG.md                 # Version history
 ├── LICENSE                      # MIT License
-├── INSTALLATION.md              # Detailed installation guide
+├── INSTALLATION.md              # Detailed setup guide
 ├── scripts/
-│   └── saveText_v3.8.txt        # FileMaker script (copy/paste)
+│   └── saveText_v3.8.txt        # FileMaker script
 ├── webviewer/
 │   └── QuillEditor_v4.html      # WebViewer HTML/JS
 ├── custom-functions/
@@ -214,143 +134,84 @@ fm-webdirect-richtext/
     ├── TROUBLESHOOTING.md       # Common issues
     └── DELTA_FORMAT.md          # Quill Delta JSON reference
 ```
-## 📚 Documentation Index
 
-Documentation stored under [`/docs`](./docs/)  
-
----
-
-### 🔹 Core
-- [ARCHITECTURE](./docs/ARCHITECTURE.md)
-- [INSTALLATION](./docs/INSTALLATION.md)
-- [DELTA FORMAT](./docs/DELTA_FORMAT.md)
-- [TROUBLESHOOTING](./docs/TROUBLESHOOTING.md)
-- [CHANGELOG](./docs/CHANGELOG.md)
-
----
 ---
 
 ## 🔧 How It Works
 
-### Architecture Overview
+The `saveText` script iterates through Quill's JSON Delta format and applies FileMaker's native text functions:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      WebViewer                              │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                  Quill.js Editor                    │    │
-│  │  ┌─────────────────────────────────────────────┐    │    │
-│  │  │  User types and formats text                │    │    │
-│  │  └─────────────────────────────────────────────┘    │    │
-│  │                       │                             │    │
-│  │                       ▼                             │    │
-│  │              JSON Delta + HTML                      │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                          │                                  │
-│                          ▼                                  │
-│         FileMaker.PerformScript("saveText", payload)        │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   saveText Script                           │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │  Parse JSON Delta → Apply TextStyleAdd/TextColor/   │    │
-│  │  TextFont/TextSize → Build Native FileMaker Text    │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                          │                                  │
-│                          ▼                                  │
-│              ┌──────────────────────┐                       │
-│              │  yourNativeField     │  ← Native Rich Text   │
-│              │  yourHTML            │  ← WebViewer Source   │
-│              └──────────────────────┘                       │
-└─────────────────────────────────────────────────────────────┘
-```
+| Quill Attribute | FileMaker Function |
+|-----------------|-------------------|
+| `bold: true` | `TextStyleAdd($text ; Bold)` |
+| `color: "#FF0000"` | `TextColor($text ; RGB(255,0,0))` |
+| `font: "georgia"` | `TextFont($text ; "Georgia")` |
+| `size: "24px"` | `TextSize($text ; 24)` |
+| `list: "ordered"` | Prefix with `1. ` (auto-numbered) |
 
-### The Delta Format
-
-Quill.js outputs a "Delta" format—an array of operations describing text and formatting:
-
-```json
-{
-  "delta": {
-    "ops": [
-      { "insert": "Hello ", "attributes": { "bold": true } },
-      { "insert": "World", "attributes": { "color": "#FF0000" } },
-      { "insert": "\n" }
-    ]
-  },
-  "html": "<p><strong>Hello </strong><span style=\"color: #FF0000;\">World</span></p>"
-}
-```
-
-The `saveText` script iterates through each operation, applying FileMaker's native text functions:
-- `TextStyleAdd()` for bold, italic, underline, etc.
-- `TextColor()` for text colors
-- `TextFont()` for font families
-- `TextSize()` for font sizes
+For the full technical breakdown, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ---
 
-## 🐛 Known Limitations
+## 🎯 A Victory for the Platform
 
-| Limitation | Reason | Workaround |
-|------------|--------|------------|
-| No inline images | FileMaker text fields don't support embedded images | Use container fields alongside |
-| No text alignment | FileMaker's text functions don't support paragraph alignment | Use layout alignment |
-| No indentation | Beyond tab characters for lists | Manual tab insertion |
-| No highlight/background | FileMaker has no background color function | Use TextColor for emphasis |
+This project demonstrates the incredible flexibility of Claris FileMaker. By combining a **WebViewer for UI** and **native Scripting for logic**, we can solve complex challenges without external plugins or dependencies.
 
-**Note:** These are FileMaker platform limitations, not limitations of our approach. The Claris add-on has the same constraints *plus* the bitmap problem.
+The platform gave us all the tools we needed:
+- `FileMaker.PerformScript()` for WebViewer-to-script communication
+- `TextStyleAdd()`, `TextColor()`, `TextFont()`, `TextSize()` for native formatting
+- JSON functions for parsing complex data structures
+
+We're sharing this as an **open-source resource** to help the community deliver even better solutions to their clients.
+
+---
+
+## 📝 Known Considerations
+
+| Consideration | Context |
+|---------------|---------|
+| No inline images | FileMaker text fields are optimized for text; use container fields for images |
+| No text alignment | Paragraph alignment handled at layout level |
+| No background colors | FileMaker's text functions focus on foreground styling |
+
+These reflect platform design choices, not limitations of this approach.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please:
+Contributions welcome! Please:
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Submit a Pull Request
 
 ---
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License — Use freely in your commercial and personal projects.
 
 ---
 
 ## 🙏 Acknowledgments
 
-This solution was developed through collaborative AI-human partnership, solving a problem that Claris's own engineering team approached differently (keeping content in WebViewer). The native text translation approach required:
+This solution was developed through collaborative effort:
 
-- Deep understanding of FileMaker's styled text internals
-- Reverse-engineering Quill's Delta format edge cases  
-- Debugging FileMaker's text concatenation quirks (the 1111px bug)
-- Testing across WebDirect, Pro, and various browsers
+- **Dimitris Kokoutsidis** ([Integrity Data Ltd](https://axelar.eu)) — Architecture and domain expertise
+- **Claude (Anthropic)** — Script development and documentation
+- **Gemini (Google)** — Analysis and validation
 
-**Contributors:**
-- **Dimitris Kokoutsidis** - Project architect, testing, domain expertise, and the insight that native output was the right goal
-- **Claude (Anthropic)** - Script architecture, debugging, and documentation
-- **Gemini (Google)** - Root cause analysis (v3.5 styled CR bug) and validation
-
-Special thanks to the FileMaker community for decades of creative problem-solving, and to the Quill.js team for their excellent editor.
+Thanks to the FileMaker community for decades of knowledge sharing, and to Claris for building a platform flexible enough to make solutions like this possible.
 
 ---
 
-## 📞 Support
+## 📞 Resources
 
-- **Issues**: [GitHub Issues](https://github.com/your-repo/fm-webdirect-richtext/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-repo/fm-webdirect-richtext/discussions)
-- **Author**: [Dimitris Kokoutsidis](https://axelar.eu)
+- **Documentation**: [docs/](docs/)
+- **Issues**: [GitHub Issues](https://github.com/IntegrityData/fm-webdirect-richtext/issues)
+- **Author**: [axelar.eu](https://axelar.eu)
 
 ---
 
-*"Web users cannot enter data with rich text formatting"* — Not anymore.
-
-*"WebViewers print as bitmaps"* — Not ours.
-
-**Two problems. One solution. Open source.** ✨
+*Helping FileMaker developers say "Yes" to rich text in WebDirect.*
