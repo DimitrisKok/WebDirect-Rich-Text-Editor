@@ -63,7 +63,11 @@ Let (
 ```
 
 **Description:**
-> Cross-version JSON parse wrapper for FileMaker 19+. Handles edge cases where JSONGetElement returns error markers.
+> - Cross-version, backward-compatible JSON parse wrapper. 
+- Returns cached JSON object in FM22+ (for fast, multi-key or looping access). 
+- Returns raw text in older FM, where JSONParse is not available. 
+- Always safe to use as first argument to JSONGetElement() etc. 
+ 
 
 3. Click **OK** to save
 
