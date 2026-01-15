@@ -24,22 +24,36 @@ This open-source module enables robust rich text editing in WebDirect while main
 This isn't a workaround—it's a **bridge**. It uses a modern web interface ([Quill.js 2.0](https://quilljs.com/)) for the user experience, but crucially, it respects the FileMaker database by converting that input into **native FileMaker styled text**.
 
 ```
-      ┌─────────────────────────────────────────────────────────────────┐
-      │  USER EXPERIENCE (WebViewer)                                    │
-      │  ┌─────────────────────────────────────────────────────────────┐│
-      │  │         Quill.js Rich Text Editor                           ││
-      │  │         Modern, familiar editing interface                  ││
-      │  └─────────────────────────────────────────────────────────────┘│
-      └─────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼ JSON Delta → Native Translation
-      ┌─────────────────────────────────────────────────────────────────┐
-      │  DATA STORAGE (Native FileMaker Text Field)                     │
-      │  ┌─────────────────────────────────────────────────────────────┐│
-      │  │  TextStyleAdd() • TextColor() • TextFont() • TextSize()     ││
-      │  │  Clean, searchable, vector-ready for reporting              ││
-      │  └─────────────────────────────────────────────────────────────┘│
-      └─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      WebViewer                              │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                  Quill.js Editor                    │    │
+│  │  ┌─────────────────────────────────────────────┐    │    │
+│  │  │  User types and formats text                │    │    │
+│  │  └─────────────────────────────────────────────┘    │    │
+│  │                       │                             │    │
+│  │                       ▼                             │    │
+│  │              JSON Delta + HTML                      │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                          │                                  │
+│                          ▼                                  │
+│         FileMaker.PerformScript("saveText", payload)        │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   saveText Script                           │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  Parse JSON Delta → Apply TextStyleAdd/TextColor/   │    │
+│  │  TextFont/TextSize → Build Native FileMaker Text    │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                          │                                  │
+│                          ▼                                  │
+│              ┌──────────────────────┐                       │
+│              │  yourNativeField     │  ← Native Rich Text   │
+│              │  yourHTML            │  ← WebViewer Source   │
+│              └──────────────────────┘                       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -149,7 +163,7 @@ The `saveText` script iterates through Quill's JSON Delta format and applies Fil
 | `size: "24px"` | `TextSize($text ; 24)` |
 | `list: "ordered"` | Prefix with `1. ` (auto-numbered) |
 
-For the full technical breakdown, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+For the full technical breakdown, see [ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ---
 
@@ -191,7 +205,7 @@ Contributions welcome! Please:
 ## 📜 License
 
 MIT License — Use freely in your commercial and personal projects.
-
+- see the [LICENSE](LICENSE) file for details.
 ---
 
 ## 🙏 Acknowledgments
@@ -199,8 +213,8 @@ MIT License — Use freely in your commercial and personal projects.
 This solution was developed through collaborative effort:
 
 - **Dimitris Kokoutsidis** ([Axelar](https://axelar.eu)) — Architecture and domain expertise
-- **Claude (Anthropic)** — Script development and documentation
-- **Gemini (Google)** — Analysis and validation
+- **Claude Opues 4.5 (Anthropic)** — Script development and documentation
+- **Gemini 3 Pro (Google)** — Analysis and validation
 
 Thanks to the FileMaker community for decades of knowledge sharing, and to Claris for building a platform flexible enough to make solutions like this possible.
 
@@ -209,7 +223,6 @@ Thanks to the FileMaker community for decades of knowledge sharing, and to Clari
 ## 📞 Resources
 
 - **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/IntegrityData/fm-webdirect-richtext/issues)
 - **Author**: [axelar.eu](https://axelar.eu)
 
 ---
