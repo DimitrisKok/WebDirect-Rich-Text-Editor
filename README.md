@@ -218,7 +218,7 @@ MIT License — Use freely in your commercial and personal projects.
 
 This solution was developed through collaborative effort:
 
-- **Dimitris Kokoutsidis** ([ Axelar ]((https://axelar.eu/what-the-experts-are-saying-about-dimitris-kokoutsidis/)) — Architecture and domain expertise
+- **Dimitris Kokoutsidis** ([ Axelar ](https://axelar.eu/what-the-experts-are-saying-about-dimitris-kokoutsidis/) — Architecture and domain expertise
 - **Claude Opus 4.5 (Anthropic)** — Script development and documentation
 - **Gemini 3 Pro (Google)** — Analysis and validation
 
