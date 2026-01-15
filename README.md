@@ -229,7 +229,7 @@ Thanks to the FileMaker community for decades of knowledge sharing, and to Clari
 ## 📞 Resources
 
 - **Documentation**: [docs/](docs/)
-- **Author**: [axelar.eu]([https://axelar.eu](https://axelar.eu/extending-webdirect-a-native-rich-text-editor-for-professional-reporting/)
+- **Author**: [ axelar.eu ](https://axelar.eu/extending-webdirect-a-native-rich-text-editor-for-professional-reporting/)
 
 ---
 
