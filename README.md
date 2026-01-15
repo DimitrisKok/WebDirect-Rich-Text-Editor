@@ -1,4 +1,4 @@
-# FileMaker WebDirect Rich Text Bridge
+# FileMaker WebDirect Rich Text Editor Bridge
 
 **Extending WebDirect with native rich text editing for professional reporting.**
 
