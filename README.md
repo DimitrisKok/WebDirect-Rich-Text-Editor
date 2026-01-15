@@ -219,7 +219,7 @@ MIT License — Use freely in your commercial and personal projects.
 This solution was developed through collaborative effort:
 
 - **Dimitris Kokoutsidis** ([ Axelar ](https://axelar.eu/what-the-experts-are-saying-about-dimitris-kokoutsidis/)) — Architecture and domain expertise
-- **Claude Opus 4.5 (Anthropic)** — Script development and documentation
+- **Claude Opus 4.5 (Anthropic)** — Script assistant and documentation
 - **Gemini 3 Pro (Google)** — Analysis and validation
 
 Thanks to the FileMaker community for decades of knowledge sharing, and to Claris for building a platform flexible enough to make solutions like this possible.
