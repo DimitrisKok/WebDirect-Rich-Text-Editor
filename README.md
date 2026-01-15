@@ -115,15 +115,15 @@ Built entirely with standard FileMaker tools—Scripting and WebViewers. No plug
 
 ### 2. Add the Custom Function
 
-Create `SafeJSONParse` (see `custom-functions/SafeJSONParse.txt`)
+Create `SafeJSONParse` (see [`SafeJSONParse.txt`](https://github.com/DimitrisKok/WebDirect-Rich-Text-Editor/blob/main/custom-functions/SafeJSONParse.txt))
 
 ### 3. Import the Script
 
-Copy `scripts/saveText_v3.8.txt` into your solution and update field references.
+Copy [`saveText_v3.8.txt`](https://github.com/DimitrisKok/WebDirect-Rich-Text-Editor/blob/main/scripts/saveText_v3.8.txt) into your solution and update field references.
 
 ### 4. Add the WebViewer
 
-Configure with the HTML from `webviewer/QuillEditor_v4.html`
+Configure with the HTML from [`QuillEditor_v4.html`](https://github.com/DimitrisKok/WebDirect-Rich-Text-Editor/blob/main/webviewer/QuillEditor_v4.html)
 
 **Detailed instructions:** See [INSTALLATION.md](docs/INSTALLATION.md)
 
@@ -218,8 +218,8 @@ MIT License — Use freely in your commercial and personal projects.
 
 This solution was developed through collaborative effort:
 
-- **Dimitris Kokoutsidis** ([Axelar](https://axelar.eu)) — Architecture and domain expertise
-- **Claude Opues 4.5 (Anthropic)** — Script development and documentation
+- **Dimitris Kokoutsidis** ([ Axelar ](https://axelar.eu)) — Architecture and domain expertise
+- **Claude Opus 4.5 (Anthropic)** — Script development and documentation
 - **Gemini 3 Pro (Google)** — Analysis and validation
 
 Thanks to the FileMaker community for decades of knowledge sharing, and to Claris for building a platform flexible enough to make solutions like this possible.
