@@ -1,478 +1,526 @@
-#------------------------------------------------------
-#PURPOSE:
-#Translates Quill.js JSON "Delta" to Native FileMaker Rich Text.
-#v3.8: Complete working version with all bugs fixed.
-#
-#FEATURES:
-#- Styles: Bold, Italic, Underline, Strikethrough, Super/Sub
-#- Colors: Hex (#FF0000) and RGB (rgb(255,0,0)) parsing
-#- Fonts: 10 families mapped (Arial, Times, Courier, Georgia, etc.)
-#- Sizes: Named (small, large, huge) and numeric px values
-#- Lists: Ordered (1. 2. 3.) and Bullet (•) with tab indentation
-#
-#CRUD: Update (Overwrites the target fields)
-#------------------------------------------------------
-#Version: 3.8
-#------------------------------------------------------
-#Change Log:
-#- v1.0 2026-01-12: Initial Logic (Bold/Italic working)
-#- v2.0 2026-01-13: Added List Logic (Case A/B) and Buffer Strategy
-#- v3.0 2026-01-13: Added "Split Chunk" logic (Case C-Special)
-#- v3.1 2026-01-13: Added Char(9) (Tab) to list prefixes
-#- v3.2 2026-01-13: Added HTML saving logic
-#- v3.3 2026-01-13: Added super/sub support
-#- v3.4 2026-01-13: Added Font Face and Font Size parsing
-#- v3.5 2026-01-14: Styled CR fix, forced base style
-#- v3.6 2026-01-14: Fixed Color/Font/Size variable errors
-#- v3.7 2026-01-14: Fixed 1111px concatenation bug
-#- v3.8 2026-01-14: Fixed list marker placement bug
-#------------------------------------------------------
-#Created By: Dimitris Kokoutsidis + Gemini 3 Pro × Claude Opus 4.5
-#------------------------------------------------------
-#REQUIREMENTS:
-#- Custom Function: SafeJSONParse ( json )
-#- Fields: yourTable::yourNativeField, yourTable::yourHTML
-#------------------------------------------------------
-#INPUT:
-#- JSON Format: { "delta": { "ops": [ ... ] }, "html": "..." }
-#- Called via FileMaker.PerformScript from WebViewer JavaScript
-#------------------------------------------------------
-#OUTPUT:
-#- yourTable::yourNativeField (Native Rich Text)
-#- yourTable::yourHTML (WebViewer HTML source)
-#------------------------------------------------------
+# ------------------------------------------------------
+# PURPOSE:
+# Core Translation Engine: Converts Quill.js JSON "Delta" format
+# into Native FileMaker Styled Text.
+
+# Solves the "Bitmap Problem" by ensuring text is stored as
+# vector data (searchable/printable) rather than a WebViewer blob.
+
+# Key Features:
+# - Iterates through Delta operations ("ops").
+# - Applies FileMaker text functions (TextStyleAdd, TextColor, etc.).
+# - Handles complex List logic (Ordered 1. 2. / Bullet •).
+# - "Buffer Strategy" prevents style corruption across newlines.
+# - Includes "The 1111px Fix": Forces Base Style (Arial 12) on
+# every flush point to prevent style bleeding.
+# ------------------------------------------------------
+# Version: 3.8
+# ------------------------------------------------------
+# Change Log:
+# - v1.0 2026-01-12: Initial Logic (Bold/Italic working)
+# - v2.0 2026-01-13: Added List Logic (Case A/B) and Buffer Strategy
+# - v3.0 2026-01-13: Added "Split Chunk" logic (Case C-Special)
+# - v3.1 2026-01-13: Added Char(9) (Tab) to list prefixes
+# - v3.2 2026-01-13: Added HTML saving logic
+# - v3.3 2026-01-13: Added super/sub support
+# - v3.4 2026-01-13: Added Font Face and Font Size parsing
+# - v3.5 2026-01-14: Styled CR fix, forced base style (Gemini collab)
+# - v3.6 2026-01-14: Fixed Color/Font/Size bugs from v3.5 simplification
+# - v3.7 2026-01-14: Fixed 1111px concatenation bug - inline styled CR
+# ------------------------------------------------------
+# Creation Date: 2026-01-12
+# Created By: Dimitris Kokoutsidis + ( Gemini 3 Pro × Claude Opus 4.5 )
+# ------------------------------------------------------
+# Modified By: Dimitris Kokoutsidis
+# Modification Date: 2026-01-15
+# ------------------------------------------------------
+# Last Modification:
+# - Refactored into v2025.2 Documentation Standard.
+# - Confirmed v3.7 logic stability.
+# ------------------------------------------------------
+
+# REQUIREMENTS:
+# - Tables:
+# - yourTable (Target table for native text storage)
+
+# - Layouts:
+# - Any (Context-agnostic, though usually called from the editor layout)
+
+# - Local Variables:
+# - $json: Parsed ScriptParameter
+# - $delta: The "ops" array from Quill
+# - $Buffer: Accumulates text segments before flushing to FinalText
+# - $FinalText: The assembled native result
+
+# - Global Variables:
+# - $$debug: Stores the last processed JSON for troubleshooting
+# ------------------------------------------------------
+
+# INPUT:
+# - Script Parameters:
+# - JSON Format:
+# {
+# "delta": { "ops": [ ... ] },
+# "html": "<p>...</p>"
+# }
+
+# - Calling Script(s):
+# - Usually triggered by a "Save" button or OnRecordCommit
+
+# - Calling Script(s) Server-side:
+# - None (Client-side translation recommended for UI responsiveness)
+# ------------------------------------------------------
+
+# - Called Scripts (Client-side):
+# - None
+
+# - Called Scripts (Server-side):
+# - None
+# ------------------------------------------------------
+# CUSTOM FUNCTIONS:
+# - SafeJSONParse ( json )
+# - Description: Cross-version wrapper to safely parse JSON in FM19+
+# - Defined in: SafeJSONParse.txt
+# ------------------------------------------------------
+
+# OUTPUT:
+# - Modifies: `yourTable::yourNativeField` (Native Text)
+# - Modifies: `yourTable::yourHTML` (Webviewer Persistence)
+# ------------------------------------------------------
 Set Error Capture [ On ]
-#------------------------------------------------------
-#Step 1.0: Parse Payload
-#------------------------------------------------------
-Set Variable [ $json ; Value: SafeJSONParse ( Get(ScriptParameter) ) ]
-Set Variable [ $$debug ; Value: $json ]
-Set Variable [ $delta ; Value: JSONGetElement ( $json ; "delta" ) ]
-Set Variable [ $html ; Value: JSONGetElement ( $json ; "html" ) ]
-Set Variable [ $ops ; Value: JSONListKeys ( $delta ; "ops" ) ]
-Set Variable [ $count ; Value: ValueCount ( $ops ) ]
-#------------------------------------------------------
-#Step 2.0: Initialize State
-#------------------------------------------------------
-Set Variable [ $i ; Value: 0 ]
-Set Variable [ $FinalText ; Value: "" ]
-Set Variable [ $Buffer ; Value: "" ]
-Set Variable [ $ListCount ; Value: 0 ]
-#------------------------------------------------------
-#Step 3.0: Main Loop
-#------------------------------------------------------
-Loop [ Flush: Always ]
-Exit Loop If [ $i >= $count ]
-#------------------------------------------------------
-#Step 3.1: Get Data
-#------------------------------------------------------
-Set Variable [ $chunk ; Value: JSONGetElement ( $delta ; "ops[" & $i & "].insert" ) ]
-Set Variable [ $attrs ; Value: JSONGetElement ( $delta ; "ops[" & $i & "].attributes" ) ]
-#------------------------------------------------------
-#Step 3.1b: Validate Attributes
-#------------------------------------------------------
-If [ IsEmpty ( $attrs ) or Left ( $attrs ; 1 ) ≠ "{" ]
-Set Variable [ $attrs ; Value: "" ]
-End If
-#------------------------------------------------------
-#Step 3.2: Normalize with PLAIN CR, then apply base style
-#------------------------------------------------------
-Set Variable [ $chunk ; Value: Substitute ( $chunk ; [ Char(10) ; ¶ ] ; [ "\n" ; ¶ ] ) ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Arial" ) ]
-Set Variable [ $chunk ; Value: TextSize ( $chunk ; 12 ) ]
-#------------------------------------------------------
-#Step 3.3: Flags
-#------------------------------------------------------
-Set Variable [ $endsWithReturn ; Value: Right ( $chunk ; 1 ) = ¶ ]
-Set Variable [ $startsWithReturn ; Value: Left ( $chunk ; 1 ) = ¶ ]
-Set Variable [ $listType ; Value: JSONGetElement ( $attrs ; "list" ) ]
-Set Variable [ $hasListAttr ; Value: not IsEmpty ( $listType ) ]
-#==========================================================
-#CASE A: Pure Line Terminator
-#==========================================================
-If [ $chunk = ¶ ]
-#------------------------------------------------------
-#FIX v3.8: If buffer has embedded returns, flush all but last line first
-#This prevents list markers from being applied to preceding plain text
-#------------------------------------------------------
-If [ PatternCount ( $Buffer ; ¶ ) > 0 ]
-Set Variable [ $lastReturnPos ; Value: Position ( $Buffer ; ¶ ; Length ( $Buffer ) ; -1 ) ]
-Set Variable [ $FinalText ; Value: $FinalText & Left ( $Buffer ; $lastReturnPos ) ]
-Set Variable [ $Buffer ; Value: Right ( $Buffer ; Length ( $Buffer ) - $lastReturnPos ) ]
-End If
-#------------------------------------------------------
-If [ $listType = "ordered" ]
-Set Variable [ $ListCount ; Value: $ListCount + 1 ]
-Set Variable [ $Buffer ; Value: Char(9) & $ListCount & ". " & $Buffer ]
-Else If [ $listType = "bullet" ]
-Set Variable [ $ListCount ; Value: 0 ]
-Set Variable [ $Buffer ; Value: Char(9) & "• " & $Buffer ]
-Else
-Set Variable [ $ListCount ; Value: 0 ]
-End If
-#Flush with inline styled CR
-Set Variable [ $FinalText ; Value: $FinalText & $Buffer & TextSize ( TextFont ( ¶ ; "Arial" ) ; 12 ) ]
-Set Variable [ $Buffer ; Value: "" ]
-#------------------------------------------------------
-#==========================================================
-#CASE B: Text + Return + List Attribute
-#==========================================================
-Else If [ $endsWithReturn and $hasListAttr ]
-#------------------------------------------------------
-#B1. Strip trailing return
-#------------------------------------------------------
-Set Variable [ $textPart ; Value: Left ( $chunk ; Length ( $chunk ) - 1 ) ]
-#------------------------------------------------------
-#B2. Apply Styles (Bold/Italic/Underline/Strike)
-#------------------------------------------------------
-If [ JSONGetElement ( $attrs ; "bold" ) = 1 ]
-Set Variable [ $textPart ; Value: TextStyleAdd ( $textPart ; Bold ) ]
-End If
-If [ JSONGetElement ( $attrs ; "italic" ) = 1 ]
-Set Variable [ $textPart ; Value: TextStyleAdd ( $textPart ; Italic ) ]
-End If
-If [ JSONGetElement ( $attrs ; "underline" ) = 1 ]
-Set Variable [ $textPart ; Value: TextStyleAdd ( $textPart ; Underline ) ]
-End If
-If [ JSONGetElement ( $attrs ; "strike" ) = 1 ]
-Set Variable [ $textPart ; Value: TextStyleAdd ( $textPart ; Strikethrough ) ]
-End If
-#------------------------------------------------------
-#B3. Super/Sub
-#------------------------------------------------------
-Set Variable [ $scriptAttr ; Value: JSONGetElement ( $attrs ; "script" ) ]
-If [ $scriptAttr = "super" ]
-Set Variable [ $textPart ; Value: TextStyleAdd ( $textPart ; Superscript ) ]
-Else If [ $scriptAttr = "sub" ]
-Set Variable [ $textPart ; Value: TextStyleAdd ( $textPart ; Subscript ) ]
-End If
-#------------------------------------------------------
-#B4. Color Parsing
-#------------------------------------------------------
-Set Variable [ $colorVal ; Value: JSONGetElement ( $attrs ; "color" ) ]
-If [ not IsEmpty ( $colorVal ) ]
-If [ Left ( $colorVal ; 1 ) = "#" ]
-Set Variable [ $hex ; Value: Upper ( $colorVal ) ]
-Set Variable [ $r ; Value: (Position("0123456789ABCDEF";Middle($hex;2;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;3;1);1;1)-1) ]
-Set Variable [ $g ; Value: (Position("0123456789ABCDEF";Middle($hex;4;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;5;1);1;1)-1) ]
-Set Variable [ $b ; Value: (Position("0123456789ABCDEF";Middle($hex;6;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;7;1);1;1)-1) ]
-Set Variable [ $textPart ; Value: TextColor ( $textPart ; RGB ( $r ; $g ; $b ) ) ]
-Else If [ PatternCount ( $colorVal ; "rgb" ) > 0 ]
-Set Variable [ $rgbList ; Value: Substitute ( Filter ( $colorVal ; "0123456789," ) ; "," ; ¶ ) ]
-Set Variable [ $textPart ; Value: TextColor ( $textPart ; RGB ( GetValue($rgbList;1) ; GetValue($rgbList;2) ; GetValue($rgbList;3) ) ) ]
-End If
-End If
-#------------------------------------------------------
-#B5. Font Handling (Full 10-font map)
-#------------------------------------------------------
-Set Variable [ $fontVal ; Value: JSONGetElement ( $attrs ; "font" ) ]
-If [ not IsEmpty ( $fontVal ) ]
-If [ $fontVal = "arial" ]
-Set Variable [ $textPart ; Value: TextFont ( $textPart ; "Arial" ) ]
-Else If [ $fontVal = "times" ]
-Set Variable [ $textPart ; Value: TextFont ( $textPart ; "Times New Roman" ) ]
-Else If [ $fontVal = "courier" ]
-Set Variable [ $textPart ; Value: TextFont ( $textPart ; "Courier New" ) ]
-Else If [ $fontVal = "georgia" ]
-Set Variable [ $textPart ; Value: TextFont ( $textPart ; "Georgia" ) ]
-Else If [ $fontVal = "verdana" ]
-Set Variable [ $textPart ; Value: TextFont ( $textPart ; "Verdana" ) ]
-Else If [ $fontVal = "tahoma" ]
-Set Variable [ $textPart ; Value: TextFont ( $textPart ; "Tahoma" ) ]
-Else If [ $fontVal = "trebuchet" ]
-Set Variable [ $textPart ; Value: TextFont ( $textPart ; "Trebuchet MS" ) ]
-Else If [ $fontVal = "helvetica" ]
-Set Variable [ $textPart ; Value: TextFont ( $textPart ; "Helvetica" ) ]
-Else If [ $fontVal = "serif" ]
-Set Variable [ $textPart ; Value: TextFont ( $textPart ; "Times New Roman" ) ]
-Else If [ $fontVal = "monospace" ]
-Set Variable [ $textPart ; Value: TextFont ( $textPart ; "Courier New" ) ]
-End If
-End If
-#------------------------------------------------------
-#B6. Size Handling (Named + px + numeric)
-#------------------------------------------------------
-Set Variable [ $sizeVal ; Value: JSONGetElement ( $attrs ; "size" ) ]
-If [ not IsEmpty ( $sizeVal ) and Left ( $sizeVal ; 1 ) ≠ "?" ]
-If [ $sizeVal = "small" ]
-Set Variable [ $textPart ; Value: TextSize ( $textPart ; 10 ) ]
-Else If [ $sizeVal = "large" ]
-Set Variable [ $textPart ; Value: TextSize ( $textPart ; 18 ) ]
-Else If [ $sizeVal = "huge" ]
-Set Variable [ $textPart ; Value: TextSize ( $textPart ; 32 ) ]
-Else If [ PatternCount ( $sizeVal ; "px" ) > 0 ]
-Set Variable [ $sizeNum ; Value: Filter ( $sizeVal ; "0123456789" ) ]
-If [ not IsEmpty ( $sizeNum ) and $sizeNum > 0 ]
-Set Variable [ $textPart ; Value: TextSize ( $textPart ; $sizeNum ) ]
-End If
-Else
-Set Variable [ $sizeNum ; Value: Filter ( $sizeVal ; "0123456789" ) ]
-If [ not IsEmpty ( $sizeNum ) and $sizeNum > 0 ]
-Set Variable [ $textPart ; Value: TextSize ( $textPart ; $sizeNum ) ]
-End If
-End If
-End If
-#------------------------------------------------------
-#B7. Add to buffer and prepend list marker
-#------------------------------------------------------
-Set Variable [ $Buffer ; Value: $Buffer & $textPart ]
-If [ $listType = "ordered" ]
-Set Variable [ $ListCount ; Value: $ListCount + 1 ]
-Set Variable [ $Buffer ; Value: Char(9) & $ListCount & ". " & $Buffer ]
-Else If [ $listType = "bullet" ]
-Set Variable [ $ListCount ; Value: 0 ]
-Set Variable [ $Buffer ; Value: Char(9) & "• " & $Buffer ]
-End If
-#------------------------------------------------------
-#B8. Flush with inline styled CR
-#------------------------------------------------------
-Set Variable [ $FinalText ; Value: $FinalText & $Buffer & TextSize ( TextFont ( ¶ ; "Arial" ) ; 12 ) ]
-Set Variable [ $Buffer ; Value: "" ]
-#------------------------------------------------------
-#==========================================================
-#CASE C: Leading Return (Split Chunk)
-#==========================================================
-Else If [ $startsWithReturn and Length ( $chunk ) > 1 ]
-#------------------------------------------------------
-#C1. Flush previous buffer with inline styled CR
-#------------------------------------------------------
-Set Variable [ $FinalText ; Value: $FinalText & $Buffer & TextSize ( TextFont ( ¶ ; "Arial" ) ; 12 ) ]
-Set Variable [ $Buffer ; Value: "" ]
-Set Variable [ $ListCount ; Value: 0 ]
-#------------------------------------------------------
-#C2. Strip the leading return from the chunk
-#------------------------------------------------------
-Set Variable [ $chunk ; Value: Right ( $chunk ; Length ( $chunk ) - 1 ) ]
-#------------------------------------------------------
-#C3. Apply Styles (Bold/Italic/Underline/Strike)
-#------------------------------------------------------
-If [ JSONGetElement ( $attrs ; "bold" ) = 1 ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Bold ) ]
-End If
-If [ JSONGetElement ( $attrs ; "italic" ) = 1 ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Italic ) ]
-End If
-If [ JSONGetElement ( $attrs ; "underline" ) = 1 ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Underline ) ]
-End If
-If [ JSONGetElement ( $attrs ; "strike" ) = 1 ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Strikethrough ) ]
-End If
-#------------------------------------------------------
-#C4. Super/Sub
-#------------------------------------------------------
-Set Variable [ $scriptAttr ; Value: JSONGetElement ( $attrs ; "script" ) ]
-If [ $scriptAttr = "super" ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Superscript ) ]
-Else If [ $scriptAttr = "sub" ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Subscript ) ]
-End If
-#------------------------------------------------------
-#C5. Color Parsing
-#------------------------------------------------------
-Set Variable [ $colorVal ; Value: JSONGetElement ( $attrs ; "color" ) ]
-If [ not IsEmpty ( $colorVal ) ]
-If [ Left ( $colorVal ; 1 ) = "#" ]
-Set Variable [ $hex ; Value: Upper ( $colorVal ) ]
-Set Variable [ $r ; Value: (Position("0123456789ABCDEF";Middle($hex;2;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;3;1);1;1)-1) ]
-Set Variable [ $g ; Value: (Position("0123456789ABCDEF";Middle($hex;4;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;5;1);1;1)-1) ]
-Set Variable [ $b ; Value: (Position("0123456789ABCDEF";Middle($hex;6;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;7;1);1;1)-1) ]
-Set Variable [ $chunk ; Value: TextColor ( $chunk ; RGB ( $r ; $g ; $b ) ) ]
-Else If [ PatternCount ( $colorVal ; "rgb" ) > 0 ]
-Set Variable [ $rgbList ; Value: Substitute ( Filter ( $colorVal ; "0123456789," ) ; "," ; ¶ ) ]
-Set Variable [ $chunk ; Value: TextColor ( $chunk ; RGB ( GetValue($rgbList;1) ; GetValue($rgbList;2) ; GetValue($rgbList;3) ) ) ]
-End If
-End If
-#------------------------------------------------------
-#C6. Font Handling (Full 10-font map)
-#------------------------------------------------------
-Set Variable [ $fontVal ; Value: JSONGetElement ( $attrs ; "font" ) ]
-If [ not IsEmpty ( $fontVal ) ]
-If [ $fontVal = "arial" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Arial" ) ]
-Else If [ $fontVal = "times" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Times New Roman" ) ]
-Else If [ $fontVal = "courier" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Courier New" ) ]
-Else If [ $fontVal = "georgia" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Georgia" ) ]
-Else If [ $fontVal = "verdana" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Verdana" ) ]
-Else If [ $fontVal = "tahoma" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Tahoma" ) ]
-Else If [ $fontVal = "trebuchet" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Trebuchet MS" ) ]
-Else If [ $fontVal = "helvetica" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Helvetica" ) ]
-Else If [ $fontVal = "serif" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Times New Roman" ) ]
-Else If [ $fontVal = "monospace" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Courier New" ) ]
-End If
-End If
-#------------------------------------------------------
-#C7. Size Handling (Named + px + numeric)
-#------------------------------------------------------
-Set Variable [ $sizeVal ; Value: JSONGetElement ( $attrs ; "size" ) ]
-If [ not IsEmpty ( $sizeVal ) and Left ( $sizeVal ; 1 ) ≠ "?" ]
-If [ $sizeVal = "small" ]
-Set Variable [ $chunk ; Value: TextSize ( $chunk ; 10 ) ]
-Else If [ $sizeVal = "large" ]
-Set Variable [ $chunk ; Value: TextSize ( $chunk ; 18 ) ]
-Else If [ $sizeVal = "huge" ]
-Set Variable [ $chunk ; Value: TextSize ( $chunk ; 32 ) ]
-Else If [ PatternCount ( $sizeVal ; "px" ) > 0 ]
-Set Variable [ $sizeNum ; Value: Filter ( $sizeVal ; "0123456789" ) ]
-If [ not IsEmpty ( $sizeNum ) and $sizeNum > 0 ]
-Set Variable [ $chunk ; Value: TextSize ( $chunk ; $sizeNum ) ]
-End If
-Else
-Set Variable [ $sizeNum ; Value: Filter ( $sizeVal ; "0123456789" ) ]
-If [ not IsEmpty ( $sizeNum ) and $sizeNum > 0 ]
-Set Variable [ $chunk ; Value: TextSize ( $chunk ; $sizeNum ) ]
-End If
-End If
-End If
-#------------------------------------------------------
-#C8. Add to Buffer
-#------------------------------------------------------
-Set Variable [ $Buffer ; Value: $Buffer & $chunk ]
-#------------------------------------------------------
-#C9. Check if stripped chunk also ended with return
-#------------------------------------------------------
-If [ Right ( $chunk ; 1 ) = ¶ ]
-Set Variable [ $FinalText ; Value: $FinalText & $Buffer ]
-Set Variable [ $Buffer ; Value: "" ]
-Set Variable [ $ListCount ; Value: 0 ]
-End If
-#------------------------------------------------------
-#==========================================================
-#CASE D: Standard Text
-#==========================================================
-Else
-#------------------------------------------------------
-#D1. Apply Styles (Bold/Italic/Underline/Strike)
-#------------------------------------------------------
-If [ JSONGetElement ( $attrs ; "bold" ) = 1 ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Bold ) ]
-End If
-If [ JSONGetElement ( $attrs ; "italic" ) = 1 ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Italic ) ]
-End If
-If [ JSONGetElement ( $attrs ; "underline" ) = 1 ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Underline ) ]
-End If
-If [ JSONGetElement ( $attrs ; "strike" ) = 1 ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Strikethrough ) ]
-End If
-#------------------------------------------------------
-#D2. Super/Sub
-#------------------------------------------------------
-Set Variable [ $scriptAttr ; Value: JSONGetElement ( $attrs ; "script" ) ]
-If [ $scriptAttr = "super" ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Superscript ) ]
-Else If [ $scriptAttr = "sub" ]
-Set Variable [ $chunk ; Value: TextStyleAdd ( $chunk ; Subscript ) ]
-End If
-#------------------------------------------------------
-#D3. Color Parsing
-#------------------------------------------------------
-Set Variable [ $colorVal ; Value: JSONGetElement ( $attrs ; "color" ) ]
-If [ not IsEmpty ( $colorVal ) ]
-If [ Left ( $colorVal ; 1 ) = "#" ]
-Set Variable [ $hex ; Value: Upper ( $colorVal ) ]
-Set Variable [ $r ; Value: (Position("0123456789ABCDEF";Middle($hex;2;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;3;1);1;1)-1) ]
-Set Variable [ $g ; Value: (Position("0123456789ABCDEF";Middle($hex;4;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;5;1);1;1)-1) ]
-Set Variable [ $b ; Value: (Position("0123456789ABCDEF";Middle($hex;6;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;7;1);1;1)-1) ]
-Set Variable [ $chunk ; Value: TextColor ( $chunk ; RGB ( $r ; $g ; $b ) ) ]
-Else If [ PatternCount ( $colorVal ; "rgb" ) > 0 ]
-Set Variable [ $rgbList ; Value: Substitute ( Filter ( $colorVal ; "0123456789," ) ; "," ; ¶ ) ]
-Set Variable [ $chunk ; Value: TextColor ( $chunk ; RGB ( GetValue($rgbList;1) ; GetValue($rgbList;2) ; GetValue($rgbList;3) ) ) ]
-End If
-End If
-#------------------------------------------------------
-#D4. Font Handling (Full 10-font map)
-#------------------------------------------------------
-Set Variable [ $fontVal ; Value: JSONGetElement ( $attrs ; "font" ) ]
-If [ not IsEmpty ( $fontVal ) ]
-If [ $fontVal = "arial" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Arial" ) ]
-Else If [ $fontVal = "times" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Times New Roman" ) ]
-Else If [ $fontVal = "courier" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Courier New" ) ]
-Else If [ $fontVal = "georgia" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Georgia" ) ]
-Else If [ $fontVal = "verdana" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Verdana" ) ]
-Else If [ $fontVal = "tahoma" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Tahoma" ) ]
-Else If [ $fontVal = "trebuchet" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Trebuchet MS" ) ]
-Else If [ $fontVal = "helvetica" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Helvetica" ) ]
-Else If [ $fontVal = "serif" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Times New Roman" ) ]
-Else If [ $fontVal = "monospace" ]
-Set Variable [ $chunk ; Value: TextFont ( $chunk ; "Courier New" ) ]
-End If
-End If
-#------------------------------------------------------
-#D5. Size Handling (Named + px + numeric)
-#------------------------------------------------------
-Set Variable [ $sizeVal ; Value: JSONGetElement ( $attrs ; "size" ) ]
-If [ not IsEmpty ( $sizeVal ) and Left ( $sizeVal ; 1 ) ≠ "?" ]
-If [ $sizeVal = "small" ]
-Set Variable [ $chunk ; Value: TextSize ( $chunk ; 10 ) ]
-Else If [ $sizeVal = "large" ]
-Set Variable [ $chunk ; Value: TextSize ( $chunk ; 18 ) ]
-Else If [ $sizeVal = "huge" ]
-Set Variable [ $chunk ; Value: TextSize ( $chunk ; 32 ) ]
-Else If [ PatternCount ( $sizeVal ; "px" ) > 0 ]
-Set Variable [ $sizeNum ; Value: Filter ( $sizeVal ; "0123456789" ) ]
-If [ not IsEmpty ( $sizeNum ) and $sizeNum > 0 ]
-Set Variable [ $chunk ; Value: TextSize ( $chunk ; $sizeNum ) ]
-End If
-Else
-Set Variable [ $sizeNum ; Value: Filter ( $sizeVal ; "0123456789" ) ]
-If [ not IsEmpty ( $sizeNum ) and $sizeNum > 0 ]
-Set Variable [ $chunk ; Value: TextSize ( $chunk ; $sizeNum ) ]
-End If
-End If
-End If
-#------------------------------------------------------
-#D6. Add to Buffer
-#------------------------------------------------------
-Set Variable [ $Buffer ; Value: $Buffer & $chunk ]
-#------------------------------------------------------
-#D7. Check for trailing return (flush if present)
-#------------------------------------------------------
-If [ $endsWithReturn ]
-Set Variable [ $FinalText ; Value: $FinalText & $Buffer ]
-Set Variable [ $Buffer ; Value: "" ]
-Set Variable [ $ListCount ; Value: 0 ]
-End If
-#------------------------------------------------------
-End If
-#------------------------------------------------------
-Set Variable [ $i ; Value: $i + 1 ]
+# ------------------------------------------------------
+# Step 1.0: Parse Payload
+# ------------------------------------------------------
+Set Variable [ $json[1]; Value:SafeJSONParse ( Get(ScriptParameter) ) ]
+Set Variable [ $$debug[1]; Value:$json ]
+Set Variable [ $delta[1]; Value:JSONGetElement ( $json ; "delta" ) ]
+Set Variable [ $html[1]; Value:JSONGetElement ( $json ; "html" ) ]
+Set Variable [ $ops[1]; Value:JSONListKeys ( $delta ; "ops" ) ]
+Set Variable [ $count[1]; Value:ValueCount ( $ops ) ]
+# ------------------------------------------------------
+# Step 2.0: Initialize State
+# ------------------------------------------------------
+Set Variable [ $i[1]; Value:0 ]
+Set Variable [ $FinalText[1]; Value:"" ]
+Set Variable [ $Buffer[1]; Value:"" ]
+Set Variable [ $ListCount[1]; Value:0 ]
+# ------------------------------------------------------
+# Step 3.0: Main Loop
+# ------------------------------------------------------
+Loop [ Flush type: Always ]
+    Exit Loop If ( $i >= $count )
+    # ------------------------------------------------------
+    # Step 3.1: Get Data
+    # ------------------------------------------------------
+    Set Variable [ $chunk[1]; Value:JSONGetElement ( $delta ; "ops[" & $i & "].insert" ) ]
+    Set Variable [ $attrs[1]; Value:JSONGetElement ( $delta ; "ops[" & $i & "].attributes" ) ]
+    # ------------------------------------------------------
+    # Step 3.1b: Validate Attributes
+    # ------------------------------------------------------
+    If ( IsEmpty ( $attrs ) or Left ( $attrs ; 1 ) ≠ "{" )
+        Set Variable [ $attrs[1]; Value:"" ]
+    End If
+    # ------------------------------------------------------
+    # Step 3.2: Normalize with PLAIN CR, then apply base style
+    # ------------------------------------------------------
+    Set Variable [ $chunk[1]; Value:Substitute ( $chunk ; [ Char(10) ; ¶ ] ; [ "\n" ; ¶ ] ) ]
+    Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Arial" ) ]
+    Set Variable [ $chunk[1]; Value:TextSize ( $chunk ; 12 ) ]
+    # ------------------------------------------------------
+    # Step 3.3: Flags
+    # ------------------------------------------------------
+    Set Variable [ $endsWithReturn[1]; Value:Right ( $chunk ; 1 ) = ¶ ]
+    Set Variable [ $startsWithReturn[1]; Value:Left ( $chunk ; 1 ) = ¶ ]
+    Set Variable [ $listType[1]; Value:JSONGetElement ( $attrs ; "list" ) ]
+    Set Variable [ $hasListAttr[1]; Value:not IsEmpty ( $listType ) ]
+    # ==========================================================
+    # CASE A: Pure Line Terminator
+    # ==========================================================
+    # ------------------------------------------------------
+    # FIX: If buffer has embedded returns, flush all but last line first
+    # ------------------------------------------------------
+    If ( PatternCount ( $Buffer ; ¶ ) > 0 )
+        Set Variable [ $lastReturnPos[1]; Value:Position ( $Buffer ; ¶ ; Length ( $Buffer ) ; -1 ) ]
+        Set Variable [ $FinalText[1]; Value:$FinalText & Left ( $Buffer ; $lastReturnPos ) ]
+        Set Variable [ $Buffer[1]; Value:Right ( $Buffer ; Length ( $Buffer ) - $lastReturnPos ) ]
+    End If
+    # ------------------------------------------------------
+
+    If ( $chunk = ¶ )
+        # ------------------------------------------------------
+        If ( $listType = "ordered" )
+            Set Variable [ $ListCount[1]; Value:$ListCount + 1 ]
+            Set Variable [ $Buffer[1]; Value:Char(9) & $ListCount & ". " & $Buffer ]
+        Else If ( $listType = "bullet" )
+            Set Variable [ $ListCount[1]; Value:0 ]
+            Set Variable [ $Buffer[1]; Value:Char(9) & "• " & $Buffer ]
+        Else
+            Set Variable [ $ListCount[1]; Value:0 ]
+        End If
+        # Flush with inline styled CR
+        Set Variable [ $FinalText[1]; Value:$FinalText & $Buffer & TextSize ( TextFont ( ¶ ; "Arial" ) ; 12 ) ]
+        Set Variable [ $Buffer[1]; Value:"" ]
+        # ------------------------------------------------------
+        # ==========================================================
+        # CASE B: Text + Return + List Attribute
+        # ==========================================================
+    Else If ( $endsWithReturn and $hasListAttr )
+        # ------------------------------------------------------
+        # B1. Strip trailing return
+        # ------------------------------------------------------
+        Set Variable [ $textPart[1]; Value:Left ( $chunk ; Length ( $chunk ) - 1 ) ]
+        # ------------------------------------------------------
+        # B2. Apply Styles (Bold/Italic/Underline/Strike)
+        # ------------------------------------------------------
+        If ( JSONGetElement ( $attrs ; "bold" ) = 1 )
+            Set Variable [ $textPart[1]; Value:TextStyleAdd ( $textPart ; Bold ) ]
+        End If
+        If ( JSONGetElement ( $attrs ; "italic" ) = 1 )
+            Set Variable [ $textPart[1]; Value:TextStyleAdd ( $textPart ; Italic ) ]
+        End If
+        If ( JSONGetElement ( $attrs ; "underline" ) = 1 )
+            Set Variable [ $textPart[1]; Value:TextStyleAdd ( $textPart ; Underline ) ]
+        End If
+        If ( JSONGetElement ( $attrs ; "strike" ) = 1 )
+            Set Variable [ $textPart[1]; Value:TextStyleAdd ( $textPart ; Strikethrough ) ]
+        End If
+        # ------------------------------------------------------
+        # B3. Super/Sub
+        # ------------------------------------------------------
+        Set Variable [ $scriptAttr[1]; Value:JSONGetElement ( $attrs ; "script" ) ]
+        If ( $scriptAttr = "super" )
+            Set Variable [ $textPart[1]; Value:TextStyleAdd ( $textPart ; Superscript ) ]
+        Else If ( $scriptAttr = "sub" )
+            Set Variable [ $textPart[1]; Value:TextStyleAdd ( $textPart ; Subscript ) ]
+        End If
+        # ------------------------------------------------------
+        # B4. Color Parsing
+        # ------------------------------------------------------
+        Set Variable [ $colorVal[1]; Value:JSONGetElement ( $attrs ; "color" ) ]
+        If ( not IsEmpty ( $colorVal ) )
+            If ( Left ( $colorVal ; 1 ) = "#" )
+                Set Variable [ $hex[1]; Value:Upper ( $colorVal ) ]
+                Set Variable [ $r[1]; Value:(Position("0123456789ABCDEF";Middle($hex;2;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;3;1);1;1)-1) ]
+                Set Variable [ $g[1]; Value:(Position("0123456789ABCDEF";Middle($hex;4;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;5;1);1;1)-1) ]
+                Set Variable [ $b[1]; Value:(Position("0123456789ABCDEF";Middle($hex;6;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;7;1);1;1)-1) ]
+                Set Variable [ $textPart[1]; Value:TextColor ( $textPart ; RGB ( $r ; $g ; $b ) ) ]
+            Else If ( PatternCount ( $colorVal ; "rgb" ) > 0 )
+                Set Variable [ $rgbList[1]; Value:Substitute ( Filter ( $colorVal ; "0123456789," ) ; "," ; ¶ ) ]
+                Set Variable [ $textPart[1]; Value:TextColor ( $textPart ; RGB ( GetValue($rgbList;1) ; GetValue($rgbList;2) ; GetValue($rgbList;3) ) ) ]
+            End If
+        End If
+        # ------------------------------------------------------
+        # B5. Font Handling (Full 10-font map)
+        # ------------------------------------------------------
+        Set Variable [ $fontVal[1]; Value:JSONGetElement ( $attrs ; "font" ) ]
+        If ( not IsEmpty ( $fontVal ) )
+            If ( $fontVal = "arial" )
+                Set Variable [ $textPart[1]; Value:TextFont ( $textPart ; "Arial" ) ]
+            Else If ( $fontVal = "times" )
+                Set Variable [ $textPart[1]; Value:TextFont ( $textPart ; "Times New Roman" ) ]
+            Else If ( $fontVal = "courier" )
+                Set Variable [ $textPart[1]; Value:TextFont ( $textPart ; "Courier New" ) ]
+            Else If ( $fontVal = "georgia" )
+                Set Variable [ $textPart[1]; Value:TextFont ( $textPart ; "Georgia" ) ]
+            Else If ( $fontVal = "verdana" )
+                Set Variable [ $textPart[1]; Value:TextFont ( $textPart ; "Verdana" ) ]
+            Else If ( $fontVal = "tahoma" )
+                Set Variable [ $textPart[1]; Value:TextFont ( $textPart ; "Tahoma" ) ]
+            Else If ( $fontVal = "trebuchet" )
+                Set Variable [ $textPart[1]; Value:TextFont ( $textPart ; "Trebuchet MS" ) ]
+            Else If ( $fontVal = "helvetica" )
+                Set Variable [ $textPart[1]; Value:TextFont ( $textPart ; "Helvetica" ) ]
+            Else If ( $fontVal = "serif" )
+                Set Variable [ $textPart[1]; Value:TextFont ( $textPart ; "Times New Roman" ) ]
+            Else If ( $fontVal = "monospace" )
+                Set Variable [ $textPart[1]; Value:TextFont ( $textPart ; "Courier New" ) ]
+            End If
+        End If
+        # ------------------------------------------------------
+        # B6. Size Handling (Named + px + numeric)
+        # ------------------------------------------------------
+        Set Variable [ $sizeVal[1]; Value:JSONGetElement ( $attrs ; "size" ) ]
+        If ( not IsEmpty ( $sizeVal ) and Left ( $sizeVal ; 1 ) ≠ "?" )
+            If ( $sizeVal = "small" )
+                Set Variable [ $textPart[1]; Value:TextSize ( $textPart ; 10 ) ]
+            Else If ( $sizeVal = "large" )
+                Set Variable [ $textPart[1]; Value:TextSize ( $textPart ; 18 ) ]
+            Else If ( $sizeVal = "huge" )
+                Set Variable [ $textPart[1]; Value:TextSize ( $textPart ; 32 ) ]
+            Else If ( PatternCount ( $sizeVal ; "px" ) > 0 )
+                Set Variable [ $sizeNum[1]; Value:Filter ( $sizeVal ; "0123456789" ) ]
+                If ( not IsEmpty ( $sizeNum ) and $sizeNum > 0 )
+                    Set Variable [ $textPart[1]; Value:TextSize ( $textPart ; $sizeNum ) ]
+                End If
+            Else
+                Set Variable [ $sizeNum[1]; Value:Filter ( $sizeVal ; "0123456789" ) ]
+                If ( not IsEmpty ( $sizeNum ) and $sizeNum > 0 )
+                    Set Variable [ $textPart[1]; Value:TextSize ( $textPart ; $sizeNum ) ]
+                End If
+            End If
+        End If
+        # ------------------------------------------------------
+        # B7. Add to buffer and prepend list marker
+        # ------------------------------------------------------
+        Set Variable [ $Buffer[1]; Value:$Buffer & $textPart ]
+        If ( $listType = "ordered" )
+            Set Variable [ $ListCount[1]; Value:$ListCount + 1 ]
+            Set Variable [ $Buffer[1]; Value:Char(9) & $ListCount & ". " & $Buffer ]
+        Else If ( $listType = "bullet" )
+            Set Variable [ $ListCount[1]; Value:0 ]
+            Set Variable [ $Buffer[1]; Value:Char(9) & "• " & $Buffer ]
+        End If
+        # ------------------------------------------------------
+        # B8. Flush with inline styled CR
+        # ------------------------------------------------------
+        Set Variable [ $FinalText[1]; Value:$FinalText & $Buffer & TextSize ( TextFont ( ¶ ; "Arial" ) ; 12 ) ]
+        Set Variable [ $Buffer[1]; Value:"" ]
+        # ------------------------------------------------------
+        # ==========================================================
+        # CASE C: Leading Return (Split Chunk)
+        # ==========================================================
+    Else If ( $startsWithReturn and Length ( $chunk ) > 1 )
+        # ------------------------------------------------------
+        # C1. Flush previous buffer with inline styled CR
+        # ------------------------------------------------------
+        Set Variable [ $FinalText[1]; Value:$FinalText & $Buffer & TextSize ( TextFont ( ¶ ; "Arial" ) ; 12 ) ]
+        Set Variable [ $Buffer[1]; Value:"" ]
+        Set Variable [ $ListCount[1]; Value:0 ]
+        # ------------------------------------------------------
+        # C2. Strip the leading return from the chunk
+        # ------------------------------------------------------
+        Set Variable [ $chunk[1]; Value:Right ( $chunk ; Length ( $chunk ) - 1 ) ]
+        # ------------------------------------------------------
+        # C3. Apply Styles (Bold/Italic/Underline/Strike)
+        # ------------------------------------------------------
+        If ( JSONGetElement ( $attrs ; "bold" ) = 1 )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Bold ) ]
+        End If
+        If ( JSONGetElement ( $attrs ; "italic" ) = 1 )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Italic ) ]
+        End If
+        If ( JSONGetElement ( $attrs ; "underline" ) = 1 )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Underline ) ]
+        End If
+        If ( JSONGetElement ( $attrs ; "strike" ) = 1 )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Strikethrough ) ]
+        End If
+        # ------------------------------------------------------
+        # C4. Super/Sub
+        # ------------------------------------------------------
+        Set Variable [ $scriptAttr[1]; Value:JSONGetElement ( $attrs ; "script" ) ]
+        If ( $scriptAttr = "super" )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Superscript ) ]
+        Else If ( $scriptAttr = "sub" )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Subscript ) ]
+        End If
+        # ------------------------------------------------------
+        # C5. Color Parsing
+        # ------------------------------------------------------
+        Set Variable [ $colorVal[1]; Value:JSONGetElement ( $attrs ; "color" ) ]
+        If ( not IsEmpty ( $colorVal ) )
+            If ( Left ( $colorVal ; 1 ) = "#" )
+                Set Variable [ $hex[1]; Value:Upper ( $colorVal ) ]
+                Set Variable [ $r[1]; Value:(Position("0123456789ABCDEF";Middle($hex;2;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;3;1);1;1)-1) ]
+                Set Variable [ $g[1]; Value:(Position("0123456789ABCDEF";Middle($hex;4;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;5;1);1;1)-1) ]
+                Set Variable [ $b[1]; Value:(Position("0123456789ABCDEF";Middle($hex;6;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;7;1);1;1)-1) ]
+                Set Variable [ $chunk[1]; Value:TextColor ( $chunk ; RGB ( $r ; $g ; $b ) ) ]
+            Else If ( PatternCount ( $colorVal ; "rgb" ) > 0 )
+                Set Variable [ $rgbList[1]; Value:Substitute ( Filter ( $colorVal ; "0123456789," ) ; "," ; ¶ ) ]
+                Set Variable [ $chunk[1]; Value:TextColor ( $chunk ; RGB ( GetValue($rgbList;1) ; GetValue($rgbList;2) ; GetValue($rgbList;3) ) ) ]
+            End If
+        End If
+        # ------------------------------------------------------
+        # C6. Font Handling (Full 10-font map)
+        # ------------------------------------------------------
+        Set Variable [ $fontVal[1]; Value:JSONGetElement ( $attrs ; "font" ) ]
+        If ( not IsEmpty ( $fontVal ) )
+            If ( $fontVal = "arial" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Arial" ) ]
+            Else If ( $fontVal = "times" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Times New Roman" ) ]
+            Else If ( $fontVal = "courier" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Courier New" ) ]
+            Else If ( $fontVal = "georgia" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Georgia" ) ]
+            Else If ( $fontVal = "verdana" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Verdana" ) ]
+            Else If ( $fontVal = "tahoma" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Tahoma" ) ]
+            Else If ( $fontVal = "trebuchet" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Trebuchet MS" ) ]
+            Else If ( $fontVal = "helvetica" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Helvetica" ) ]
+            Else If ( $fontVal = "serif" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Times New Roman" ) ]
+            Else If ( $fontVal = "monospace" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Courier New" ) ]
+            End If
+        End If
+        # ------------------------------------------------------
+        # C7. Size Handling (Named + px + numeric)
+        # ------------------------------------------------------
+        Set Variable [ $sizeVal[1]; Value:JSONGetElement ( $attrs ; "size" ) ]
+        If ( not IsEmpty ( $sizeVal ) and Left ( $sizeVal ; 1 ) ≠ "?" )
+            If ( $sizeVal = "small" )
+                Set Variable [ $chunk[1]; Value:TextSize ( $chunk ; 10 ) ]
+            Else If ( $sizeVal = "large" )
+                Set Variable [ $chunk[1]; Value:TextSize ( $chunk ; 18 ) ]
+            Else If ( $sizeVal = "huge" )
+                Set Variable [ $chunk[1]; Value:TextSize ( $chunk ; 32 ) ]
+            Else If ( PatternCount ( $sizeVal ; "px" ) > 0 )
+                Set Variable [ $sizeNum[1]; Value:Filter ( $sizeVal ; "0123456789" ) ]
+                If ( not IsEmpty ( $sizeNum ) and $sizeNum > 0 )
+                    Set Variable [ $chunk[1]; Value:TextSize ( $chunk ; $sizeNum ) ]
+                End If
+            Else
+                Set Variable [ $sizeNum[1]; Value:Filter ( $sizeVal ; "0123456789" ) ]
+                If ( not IsEmpty ( $sizeNum ) and $sizeNum > 0 )
+                    Set Variable [ $chunk[1]; Value:TextSize ( $chunk ; $sizeNum ) ]
+                End If
+            End If
+        End If
+        # ------------------------------------------------------
+        # C8. Add to Buffer
+        # ------------------------------------------------------
+        Set Variable [ $Buffer[1]; Value:$Buffer & $chunk ]
+        # ------------------------------------------------------
+        # C9. Check if stripped chunk also ended with return
+        # ------------------------------------------------------
+        If ( Right ( $chunk ; 1 ) = ¶ )
+            Set Variable [ $FinalText[1]; Value:$FinalText & $Buffer ]
+            Set Variable [ $Buffer[1]; Value:"" ]
+            Set Variable [ $ListCount[1]; Value:0 ]
+        End If
+        # ------------------------------------------------------
+        # ==========================================================
+        # CASE D: Standard Text
+        # ==========================================================
+    Else
+        # ------------------------------------------------------
+        # D1. Apply Styles (Bold/Italic/Underline/Strike)
+        # ------------------------------------------------------
+        If ( JSONGetElement ( $attrs ; "bold" ) = 1 )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Bold ) ]
+        End If
+        If ( JSONGetElement ( $attrs ; "italic" ) = 1 )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Italic ) ]
+        End If
+        If ( JSONGetElement ( $attrs ; "underline" ) = 1 )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Underline ) ]
+        End If
+        If ( JSONGetElement ( $attrs ; "strike" ) = 1 )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Strikethrough ) ]
+        End If
+        # ------------------------------------------------------
+        # D2. Super/Sub
+        # ------------------------------------------------------
+        Set Variable [ $scriptAttr[1]; Value:JSONGetElement ( $attrs ; "script" ) ]
+        If ( $scriptAttr = "super" )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Superscript ) ]
+        Else If ( $scriptAttr = "sub" )
+            Set Variable [ $chunk[1]; Value:TextStyleAdd ( $chunk ; Subscript ) ]
+        End If
+        # ------------------------------------------------------
+        # D3. Color Parsing
+        # ------------------------------------------------------
+        Set Variable [ $colorVal[1]; Value:JSONGetElement ( $attrs ; "color" ) ]
+        If ( not IsEmpty ( $colorVal ) )
+            If ( Left ( $colorVal ; 1 ) = "#" )
+                Set Variable [ $hex[1]; Value:Upper ( $colorVal ) ]
+                Set Variable [ $r[1]; Value:(Position("0123456789ABCDEF";Middle($hex;2;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;3;1);1;1)-1) ]
+                Set Variable [ $g[1]; Value:(Position("0123456789ABCDEF";Middle($hex;4;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;5;1);1;1)-1) ]
+                Set Variable [ $b[1]; Value:(Position("0123456789ABCDEF";Middle($hex;6;1);1;1)-1)*16 + (Position("0123456789ABCDEF";Middle($hex;7;1);1;1)-1) ]
+                Set Variable [ $chunk[1]; Value:TextColor ( $chunk ; RGB ( $r ; $g ; $b ) ) ]
+            Else If ( PatternCount ( $colorVal ; "rgb" ) > 0 )
+                Set Variable [ $rgbList[1]; Value:Substitute ( Filter ( $colorVal ; "0123456789," ) ; "," ; ¶ ) ]
+                Set Variable [ $chunk[1]; Value:TextColor ( $chunk ; RGB ( GetValue($rgbList;1) ; GetValue($rgbList;2) ; GetValue($rgbList;3) ) ) ]
+            End If
+        End If
+        # ------------------------------------------------------
+        # D4. Font Handling (Full 10-font map)
+        # ------------------------------------------------------
+        Set Variable [ $fontVal[1]; Value:JSONGetElement ( $attrs ; "font" ) ]
+        If ( not IsEmpty ( $fontVal ) )
+            If ( $fontVal = "arial" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Arial" ) ]
+            Else If ( $fontVal = "times" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Times New Roman" ) ]
+            Else If ( $fontVal = "courier" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Courier New" ) ]
+            Else If ( $fontVal = "georgia" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Georgia" ) ]
+            Else If ( $fontVal = "verdana" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Verdana" ) ]
+            Else If ( $fontVal = "tahoma" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Tahoma" ) ]
+            Else If ( $fontVal = "trebuchet" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Trebuchet MS" ) ]
+            Else If ( $fontVal = "helvetica" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Helvetica" ) ]
+            Else If ( $fontVal = "serif" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Times New Roman" ) ]
+            Else If ( $fontVal = "monospace" )
+                Set Variable [ $chunk[1]; Value:TextFont ( $chunk ; "Courier New" ) ]
+            End If
+        End If
+        # ------------------------------------------------------
+        # D5. Size Handling (Named + px + numeric)
+        # ------------------------------------------------------
+        Set Variable [ $sizeVal[1]; Value:JSONGetElement ( $attrs ; "size" ) ]
+        If ( not IsEmpty ( $sizeVal ) and Left ( $sizeVal ; 1 ) ≠ "?" )
+            If ( $sizeVal = "small" )
+                Set Variable [ $chunk[1]; Value:TextSize ( $chunk ; 10 ) ]
+            Else If ( $sizeVal = "large" )
+                Set Variable [ $chunk[1]; Value:TextSize ( $chunk ; 18 ) ]
+            Else If ( $sizeVal = "huge" )
+                Set Variable [ $chunk[1]; Value:TextSize ( $chunk ; 32 ) ]
+            Else If ( PatternCount ( $sizeVal ; "px" ) > 0 )
+                Set Variable [ $sizeNum[1]; Value:Filter ( $sizeVal ; "0123456789" ) ]
+                If ( not IsEmpty ( $sizeNum ) and $sizeNum > 0 )
+                    Set Variable [ $chunk[1]; Value:TextSize ( $chunk ; $sizeNum ) ]
+                End If
+            Else
+                Set Variable [ $sizeNum[1]; Value:Filter ( $sizeVal ; "0123456789" ) ]
+                If ( not IsEmpty ( $sizeNum ) and $sizeNum > 0 )
+                    Set Variable [ $chunk[1]; Value:TextSize ( $chunk ; $sizeNum ) ]
+                End If
+            End If
+        End If
+        # ------------------------------------------------------
+        # D6. Add to Buffer
+        # ------------------------------------------------------
+        Set Variable [ $Buffer[1]; Value:$Buffer & $chunk ]
+        # ------------------------------------------------------
+        # D7. Check for trailing return (flush if present)
+        # ------------------------------------------------------
+        If ( $endsWithReturn )
+            Set Variable [ $FinalText[1]; Value:$FinalText & $Buffer ]
+            Set Variable [ $Buffer[1]; Value:"" ]
+            Set Variable [ $ListCount[1]; Value:0 ]
+        End If
+        # ------------------------------------------------------
+    End If
+    # ------------------------------------------------------
+    Set Variable [ $i[1]; Value:$i + 1 ]
 End Loop
-#------------------------------------------------------
-#Step 4.0: Emergency Flush (with re-style protection)
-#------------------------------------------------------
-If [ not IsEmpty ( $Buffer ) ]
-Set Variable [ $FinalText ; Value: $FinalText & TextSize ( TextFont ( $Buffer ; "Arial" ) ; 12 ) ]
+# ------------------------------------------------------
+# Step 4.0: Emergency Flush (CRITICAL: Re-apply base style)
+# ------------------------------------------------------
+If ( not IsEmpty ( $Buffer ) )
+    Set Variable [ $FinalText[1]; Value:$FinalText & TextSize ( TextFont ( $Buffer ; "Arial" ) ; 12 ) ]
 End If
-#------------------------------------------------------
-#Step 5.0: Strip Trailing Return
-#------------------------------------------------------
-If [ Right ( $FinalText ; 1 ) = ¶ ]
-Set Variable [ $FinalText ; Value: Left ( $FinalText ; Length ( $FinalText ) - 1 ) ]
+# ------------------------------------------------------
+# Step 5.0: Strip Trailing Return
+# ------------------------------------------------------
+If ( Right ( $FinalText ; 1 ) = ¶ )
+    Set Variable [ $FinalText[1]; Value:Left ( $FinalText ; Length ( $FinalText ) - 1 ) ]
 End If
-#------------------------------------------------------
-#Step 6.0: Save Result
-#------------------------------------------------------
-Set Field [ yourTable::yourNativeField ; $FinalText ]
-Set Field [ yourTable::yourHTML ; $html ]
-Commit Records/Requests [ Skip data entry validation ; No dialog ; Force Commit ]
-#------------------------------------------------------
+# ------------------------------------------------------
+# Step 6.0: Save Result
+# ------------------------------------------------------
+Set Field [ yourTable::yourNativeField; $FinalText ]
+Set Field [ yourTable::yourHTML; $html ]
+Commit Records/Requests [No dialog ]
+# ------------------------------------------------------
+
